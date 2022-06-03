@@ -1,6 +1,7 @@
 #include <iostream>
 #include <dlfcn.h>
 #include <vulkan/vulkan.h>
+#include <vector>
 
 void *load_vulkan_library(){
     void *vulkan_library = dlopen("libvulkan.so.1", RTLD_NOW);
@@ -34,6 +35,32 @@ int main() {
         std::cout << "Could not find vkGetInstanceProcAddr in Vulkan Runtime library.\n";
         return -1;
     }
-    create_global_level_func(vkGetInstanceProcAddr);
+    PFN_vkEnumerateInstanceExtensionProperties vkEnumerateInstanceExtensionProperties{};
+    PFN_vkEnumerateInstanceLayerProperties  vkEnumerateInstanceLayerProperties;
+    PFN_vkCreateInstance vkCreateInstance;
+    if (vkGetInstanceProcAddr != nullptr){
+        vkEnumerateInstanceExtensionProperties =
+                reinterpret_cast<PFN_vkEnumerateInstanceExtensionProperties>(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceExtensionProperties"));
+        vkEnumerateInstanceLayerProperties =
+                reinterpret_cast< PFN_vkEnumerateInstanceLayerProperties >(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceLayerProperties"));
+        vkCreateInstance =
+                reinterpret_cast<PFN_vkCreateInstance>(vkGetInstanceProcAddr(nullptr, "vkCreateInstance"));
+    }
+    uint32_t extensions_count;
+    if (vkEnumerateInstanceExtensionProperties != nullptr){
+        VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &extensions_count, nullptr);
+        if( (result != VK_SUCCESS) || (extensions_count == 0)) {
+            std::cout << "Could not get the number of Instance extensions." <<
+                      std::endl;
+            return -1;
+        }
+        std::vector<VkExtensionProperties> available_extensions(extensions_count);
+        result = vkEnumerateInstanceExtensionProperties(nullptr, &extensions_count, &available_extensions[0]);
+        if( (result != VK_SUCCESS) || (extensions_count == 0) ) {
+            std::cout << "Could not enumerate Instance extensions." << std::endl;
+            return -1;
+        }
+    }
+
     return 0;
 }
