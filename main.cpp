@@ -60,6 +60,15 @@ int main() {
             std::cout << "Could not enumerate Instance extensions." << std::endl;
             return -1;
         }
+
+        VkApplicationInfo application_info;
+        application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        application_info.pNext = nullptr;
+        application_info.pApplicationName = "WQ";
+        application_info.applicationVersion = VK_MAKE_VERSION(1, 2, 3);
+        application_info.pEngineName = "First";
+        application_info.engineVersion = VK_MAKE_VERSION(2, 3, 4);
+        application_info.apiVersion = VK_MAKE_VERSION( 1, 0, 0 );
     }
 
     return 0;
