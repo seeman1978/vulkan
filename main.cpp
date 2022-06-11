@@ -2,6 +2,7 @@
 #include <dlfcn.h>
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <cstring>
 
 void *load_vulkan_library(){
     void *vulkan_library = dlopen("libvulkan.so.1", RTLD_NOW);
@@ -61,6 +62,21 @@ int main() {
             return -1;
         }
 
+        std::vector<char const *> desired_extensions{"VK_KHR_portability_enumeration"};
+        for (auto &extension: desired_extensions) {
+            bool b_found{false};
+            for (auto available : available_extensions) {
+                if (strcmp(available.extensionName, extension) == 0){
+                    b_found = true;
+                }
+            }
+            if (!b_found){
+                std::cout << "Extension named '" << extension << "' is not supported."
+                          << std::endl;
+                return -1;
+            }
+        }
+
         VkApplicationInfo application_info;
         application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         application_info.pNext = nullptr;
@@ -69,6 +85,22 @@ int main() {
         application_info.pEngineName = "First";
         application_info.engineVersion = VK_MAKE_VERSION(2, 3, 4);
         application_info.apiVersion = VK_MAKE_VERSION( 1, 0, 0 );
+
+        VkInstanceCreateInfo instance_create_info;
+        instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instance_create_info.pNext = nullptr;
+        instance_create_info.flags = 0;
+        instance_create_info.pApplicationInfo = &application_info;
+        instance_create_info.enabledLayerCount = 0;
+        instance_create_info.ppEnabledLayerNames = nullptr;
+        instance_create_info.enabledExtensionCount = desired_extensions.size();
+        instance_create_info.ppEnabledExtensionNames = desired_extensions.empty() ? nullptr : &desired_extensions[0];
+        VkInstance instance;
+        result = vkCreateInstance(&instance_create_info, nullptr, &instance);
+        if( (result != VK_SUCCESS) || (instance == VK_NULL_HANDLE) ) {
+            std::cout << "Could not create Vulkan Instance." << std::endl;
+            return -1;
+        }
     }
 
     return 0;
