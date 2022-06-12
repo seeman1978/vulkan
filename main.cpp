@@ -179,7 +179,10 @@ int main() {
             return -1;
         }
         //Getting features and properties of a physical device
-
+        VkPhysicalDeviceFeatures device_features;
+        VkPhysicalDeviceProperties device_properties;
+        vkGetPhysicalDeviceFeatures(physical_device, &device_features);
+        vkGetPhysicalDeviceProperties(physical_device, &device_properties);
     }
     return 0;
 }
