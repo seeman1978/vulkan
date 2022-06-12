@@ -62,12 +62,13 @@ int main() {
             return -1;
         }
 
-        std::vector<char const *> desired_extensions{"VK_KHR_portability_enumeration"};
+        std::vector<char const *> desired_extensions{VK_KHR_SURFACE_EXTENSION_NAME};
         for (auto &extension: desired_extensions) {
             bool b_found{false};
             for (auto available : available_extensions) {
                 if (strcmp(available.extensionName, extension) == 0){
                     b_found = true;
+                    break;
                 }
             }
             if (!b_found){
@@ -95,13 +96,67 @@ int main() {
         instance_create_info.ppEnabledLayerNames = nullptr;
         instance_create_info.enabledExtensionCount = desired_extensions.size();
         instance_create_info.ppEnabledExtensionNames = desired_extensions.empty() ? nullptr : &desired_extensions[0];
+
         VkInstance instance;
         result = vkCreateInstance(&instance_create_info, nullptr, &instance);
         if( (result != VK_SUCCESS) || (instance == VK_NULL_HANDLE) ) {
             std::cout << "Could not create Vulkan Instance." << std::endl;
             return -1;
         }
-    }
 
+        // instance level
+        PFN_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
+        vkEnumeratePhysicalDevices =
+                reinterpret_cast<PFN_vkEnumeratePhysicalDevices>(vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDevices"));
+        PFN_vkGetPhysicalDeviceProperties vkGetPhysicalDeviceProperties;
+        vkGetPhysicalDeviceProperties =
+                reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties"));
+        PFN_vkGetPhysicalDeviceFeatures vkGetPhysicalDeviceFeatures;
+        vkGetPhysicalDeviceFeatures =
+                reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures"));
+        PFN_vkCreateDevice vkCreateDevice;
+        vkCreateDevice =
+                reinterpret_cast<PFN_vkCreateDevice>(vkGetInstanceProcAddr(instance, "vkCreateDevice"));
+        PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
+        vkGetDeviceProcAddr =
+                reinterpret_cast<PFN_vkGetDeviceProcAddr>(vkGetInstanceProcAddr(instance, "vkGetDeviceProcAddr"));
+
+        // physical device extension
+        PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
+        PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+        PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
+        for( auto & enabled_extension : desired_extensions ) {
+            if( std::string( enabled_extension ) == std::string( VK_KHR_SURFACE_EXTENSION_NAME ) ) {
+                vkGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr( instance, "vkGetPhysicalDeviceSurfaceSupportKHR" );
+                if( vkGetPhysicalDeviceSurfaceSupportKHR == nullptr ) {
+                    std::cout << "Could not load instance-level Vulkan function named: vkGetPhysicalDeviceSurfaceSupportKHR" << std::endl;
+                    return -1;
+                }
+                vkGetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)vkGetInstanceProcAddr( instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR" );
+                if( vkGetPhysicalDeviceSurfaceCapabilitiesKHR == nullptr ) {
+                    std::cout << "Could not load instance-level Vulkan function named: vkGetPhysicalDeviceSurfaceCapabilitiesKHR" << std::endl;
+                    return -1;
+                }
+                vkGetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)vkGetInstanceProcAddr( instance, "vkGetPhysicalDeviceSurfaceFormatsKHR" );
+                if( vkGetPhysicalDeviceSurfaceFormatsKHR == nullptr ) {
+                    std::cout << "Could not load instance-level Vulkan function named: vkGetPhysicalDeviceSurfaceFormatsKHR" << std::endl;
+                    return -1;
+                }
+            }
+        }
+        // Enumerate available physical devices
+        uint32_t devices_count{0};
+        result = vkEnumeratePhysicalDevices(instance, &devices_count, nullptr);
+        if( (result != VK_SUCCESS) || (devices_count == 0) ) {
+            std::cout << "Could not get the number of available physical devices." << std::endl;
+            return -1;
+        }
+        std::vector<VkPhysicalDevice>   available_devices(devices_count);
+        result = vkEnumeratePhysicalDevices(instance, &devices_count, available_devices.data());
+        if( (result != VK_SUCCESS) || (devices_count == 0) ) {
+            std::cout << "Could not enumerate physical devices." << std::endl;
+            return -1;
+        }
+    }
     return 0;
 }
