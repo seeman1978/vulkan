@@ -157,6 +157,29 @@ int main() {
             std::cout << "Could not enumerate physical devices." << std::endl;
             return -1;
         }
+
+        // physical device
+        VkPhysicalDevice physical_device = available_devices[0];
+
+        // physical device extension properties
+        PFN_vkEnumerateDeviceExtensionProperties vkEnumerateDeviceExtensionProperties;
+        vkEnumerateDeviceExtensionProperties =
+                reinterpret_cast<PFN_vkEnumerateDeviceExtensionProperties>(vkGetInstanceProcAddr(instance, "vkEnumerateDeviceExtensionProperties"));
+        uint32_t DeviceExtensionProperties_extensions_count = 0;
+        result = vkEnumerateDeviceExtensionProperties( physical_device, nullptr,
+                                                       &DeviceExtensionProperties_extensions_count, nullptr );
+        if( (result != VK_SUCCESS) || (DeviceExtensionProperties_extensions_count == 0) ) {
+            std::cout << "Could not get the number of device extensions." << std::endl;
+            return -1;
+        }
+        std::vector<VkExtensionProperties> available_extensions_DeviceExtensionProperties(DeviceExtensionProperties_extensions_count);
+        result = vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &DeviceExtensionProperties_extensions_count, available_extensions_DeviceExtensionProperties.data());
+        if( (result != VK_SUCCESS) || (extensions_count == 0) ) {
+            std::cout << "Could not enumerate device extensions." << std::endl;
+            return -1;
+        }
+        //Getting features and properties of a physical device
+
     }
     return 0;
 }
