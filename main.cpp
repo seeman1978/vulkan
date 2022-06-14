@@ -183,6 +183,15 @@ int main() {
         VkPhysicalDeviceProperties device_properties;
         vkGetPhysicalDeviceFeatures(physical_device, &device_features);
         vkGetPhysicalDeviceProperties(physical_device, &device_properties);
+
+        // Checking available queue families and their properties
+        PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
+        vkGetPhysicalDeviceQueueFamilyProperties =
+                reinterpret_cast<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceQueueFamilyProperties"));
+        uint32_t queue_families_count;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
+        std::vector<VkQueueFamilyProperties> queue_families(queue_families_count);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, queue_families.data());
     }
     return 0;
 }
