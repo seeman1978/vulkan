@@ -192,6 +192,17 @@ int main() {
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
         std::vector<VkQueueFamilyProperties> queue_families(queue_families_count);
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, queue_families.data());
+
+        //Selecting the index of a queue family with
+        //the desired capabilities
+        uint32_t queue_family_index{0};
+        VkQueueFlags desired_capabilities{VK_QUEUE_GRAPHICS_BIT|VK_QUEUE_COMPUTE_BIT};
+        for (auto queue_family : queue_families) {
+            if (queue_family.queueCount > 0 && queue_family.queueFlags & desired_capabilities){
+                break;
+            }
+            ++queue_family_index;
+        }
     }
     return 0;
 }
