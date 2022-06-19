@@ -28,6 +28,11 @@ void create_global_level_func(PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr){
     }
 }
 
+struct QueueInfo {
+ uint32_t FamilyIndex;
+ std::vector<float> Priorities;
+};
+
 int main() {
     std::cout << "Hello, World!" << std::endl;
     void *vulkan_library = load_vulkan_library();
@@ -195,13 +200,60 @@ int main() {
 
         //Selecting the index of a queue family with
         //the desired capabilities
-        uint32_t queue_family_index{0};
-        VkQueueFlags desired_capabilities{VK_QUEUE_GRAPHICS_BIT|VK_QUEUE_COMPUTE_BIT};
+        uint32_t queue_family_graphics_index{0};
+        VkQueueFlags desired_graphics_capabilities{VK_QUEUE_GRAPHICS_BIT};
         for (auto queue_family : queue_families) {
-            if (queue_family.queueCount > 0 && queue_family.queueFlags & desired_capabilities){
+            if (queue_family.queueCount > 0 && (queue_family.queueFlags & desired_graphics_capabilities) == desired_graphics_capabilities){
                 break;
             }
-            ++queue_family_index;
+            ++queue_family_graphics_index;
+        }
+
+        uint32_t queue_family_compute_index{0};
+        VkQueueFlags desired_compute_capabilities{VK_QUEUE_COMPUTE_BIT};
+        for (auto queue_family : queue_families) {
+            if (queue_family.queueCount > 0 && (queue_family.queueFlags & desired_compute_capabilities) == desired_compute_capabilities){
+                break;
+            }
+            ++queue_family_compute_index;
+        }
+
+        std::vector<QueueInfo> queue_infos{{queue_family_graphics_index, {1.0f}}};
+        if (queue_family_graphics_index != queue_family_compute_index){
+            queue_infos.push_back({queue_family_compute_index, {1.0f}});
+        }
+
+        // Creating a device queue create info
+        std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+        for (auto queue_info : queue_infos) {
+            VkDeviceQueueCreateInfo device_queue;
+            device_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            device_queue.pNext = nullptr;
+            device_queue.flags = 0;
+            device_queue.queueFamilyIndex = queue_info.FamilyIndex;
+            device_queue.queueCount = queue_info.Priorities.size();
+            device_queue.pQueuePriorities = queue_info.Priorities.data();
+            queue_create_infos.emplace_back(device_queue);
+        }
+
+        // Creating a logical device
+        VkDeviceCreateInfo device_create_info;
+        device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        device_create_info.pNext = nullptr;
+        device_create_info.flags = 0;
+        device_create_info.queueCreateInfoCount = queue_create_infos.size();
+        device_create_info.pQueueCreateInfos = queue_create_infos.data();
+        device_create_info.enabledLayerCount = 0;
+        device_create_info.ppEnabledLayerNames = nullptr;
+        device_create_info.enabledExtensionCount = desired_extensions.size();
+        device_create_info.ppEnabledExtensionNames = desired_extensions.data() ;
+        device_create_info.pEnabledFeatures = &device_features;
+
+        VkDevice logical_device;
+        result = vkCreateDevice(physical_device, &device_create_info, nullptr, &logical_device);
+        if( (result != VK_SUCCESS) || (logical_device == VK_NULL_HANDLE) ) {
+            std::cout << "Could not create logical device." << std::endl;
+            return -1;
         }
     }
     return 0;
