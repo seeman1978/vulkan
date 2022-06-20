@@ -183,6 +183,24 @@ int main() {
             std::cout << "Could not enumerate device extensions." << std::endl;
             return -1;
         }
+
+        // physical device desired extensions
+        std::vector<char const *> desired_extensions_DeviceExtensionProperties{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        for (auto &extension: desired_extensions_DeviceExtensionProperties) {
+            bool b_found{false};
+            for (auto available : available_extensions_DeviceExtensionProperties) {
+                if (strcmp(available.extensionName, extension) == 0){
+                    b_found = true;
+                    break;
+                }
+            }
+            if (!b_found){
+                std::cout << "Extension named '" << extension << "' is not supported."
+                          << std::endl;
+                return -1;
+            }
+        }
+
         //Getting features and properties of a physical device
         VkPhysicalDeviceFeatures device_features;
         VkPhysicalDeviceProperties device_properties;
@@ -245,10 +263,8 @@ int main() {
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
         device_create_info.enabledLayerCount = 0;
         device_create_info.ppEnabledLayerNames = nullptr;
-//        device_create_info.enabledExtensionCount = desired_extensions.size();
-//        device_create_info.ppEnabledExtensionNames = desired_extensions.data() ;
-        device_create_info.enabledExtensionCount = 0;
-        device_create_info.ppEnabledExtensionNames = nullptr ;
+        device_create_info.enabledExtensionCount = desired_extensions_DeviceExtensionProperties.size();
+        device_create_info.ppEnabledExtensionNames = desired_extensions_DeviceExtensionProperties.empty() ? nullptr : desired_extensions_DeviceExtensionProperties.data();
         device_create_info.pEnabledFeatures = &device_features;
 
         VkDevice logical_device;
@@ -257,6 +273,80 @@ int main() {
             std::cout << "Could not create logical device." << std::endl;
             return -1;
         }
+        // Load device level function
+        PFN_vkGetDeviceQueue vkGetDeviceQueue;
+        vkGetDeviceQueue =
+                reinterpret_cast<PFN_vkGetDeviceQueue>(vkGetDeviceProcAddr(logical_device, "vkGetDeviceQueue"));
+        if( vkGetDeviceQueue == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetDeviceQueue." << std::endl;
+            return -1;
+        }
+        PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+        vkDeviceWaitIdle =
+                reinterpret_cast<PFN_vkDeviceWaitIdle>(vkGetDeviceProcAddr(logical_device, "vkDeviceWaitIdle"));
+        if( vkDeviceWaitIdle == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDeviceWaitIdle." << std::endl;
+            return -1;
+        }
+        PFN_vkDestroyDevice vkDestroyDevice;
+        vkDestroyDevice =
+                reinterpret_cast<PFN_vkDestroyDevice>(vkGetDeviceProcAddr(logical_device, "vkDestroyDevice"));
+        if( vkDestroyDevice == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroyDevice." << std::endl;
+            return -1;
+        }
+        PFN_vkCreateBuffer vkCreateBuffer;
+        vkCreateBuffer =
+                reinterpret_cast<PFN_vkCreateBuffer>(vkGetDeviceProcAddr(logical_device, "vkCreateBuffer"));
+        if( vkCreateBuffer == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateBuffer." << std::endl;
+            return -1;
+        }
+        PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements;
+        vkGetBufferMemoryRequirements =
+                reinterpret_cast<PFN_vkGetBufferMemoryRequirements>(vkGetDeviceProcAddr(logical_device, "vkGetBufferMemoryRequirements"));
+        if( vkGetBufferMemoryRequirements == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetBufferMemoryRequirements." << std::endl;
+            return -1;
+        }
+
+        // Load device level function from extension
+        PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
+        vkCreateSwapchainKHR =
+                reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(logical_device, "vkCreateSwapchainKHR"));
+        if( vkCreateSwapchainKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateSwapchainKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
+        vkGetSwapchainImagesKHR =
+                reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(logical_device, "vkGetSwapchainImagesKHR"));
+        if( vkGetSwapchainImagesKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetSwapchainImagesKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
+        vkAcquireNextImageKHR =
+                reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(logical_device, "vkAcquireNextImageKHR"));
+        if( vkGetSwapchainImagesKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkAcquireNextImageKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkQueuePresentKHR vkQueuePresentKHR;
+        vkQueuePresentKHR =
+                reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(logical_device, "vkQueuePresentKHR"));
+        if( vkQueuePresentKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkQueuePresentKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
+        vkDestroySwapchainKHR =
+                reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(logical_device, "vkDestroySwapchainKHR"));
+        if( vkDestroySwapchainKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroySwapchainKHR." << std::endl;
+            return -1;
+        }
     }
+
     return 0;
 }
