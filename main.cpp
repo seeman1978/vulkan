@@ -245,8 +245,10 @@ int main() {
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
         device_create_info.enabledLayerCount = 0;
         device_create_info.ppEnabledLayerNames = nullptr;
-        device_create_info.enabledExtensionCount = desired_extensions.size();
-        device_create_info.ppEnabledExtensionNames = desired_extensions.data() ;
+//        device_create_info.enabledExtensionCount = desired_extensions.size();
+//        device_create_info.ppEnabledExtensionNames = desired_extensions.data() ;
+        device_create_info.enabledExtensionCount = 0;
+        device_create_info.ppEnabledExtensionNames = nullptr ;
         device_create_info.pEnabledFeatures = &device_features;
 
         VkDevice logical_device;
