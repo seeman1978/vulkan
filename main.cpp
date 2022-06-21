@@ -122,6 +122,9 @@ int main() {
         PFN_vkCreateDevice vkCreateDevice;
         vkCreateDevice =
                 reinterpret_cast<PFN_vkCreateDevice>(vkGetInstanceProcAddr(instance, "vkCreateDevice"));
+        PFN_vkDestroyInstance vkDestroyInstance;
+        vkDestroyInstance =
+                reinterpret_cast<PFN_vkDestroyInstance>(vkGetInstanceProcAddr(instance, "vkDestroyInstance"));
         PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
         vkGetDeviceProcAddr =
                 reinterpret_cast<PFN_vkGetDeviceProcAddr>(vkGetInstanceProcAddr(instance, "vkGetDeviceProcAddr"));
@@ -357,6 +360,22 @@ int main() {
             VkQueue graphics_queue, compute_queue;
             vkGetDeviceQueue(logical_device, queue_family_graphics_index, 0, &graphics_queue);
             vkGetDeviceQueue(logical_device, queue_family_compute_index, 0, &compute_queue);
+
+            // destroy a local device
+            if (logical_device){
+                vkDestroyDevice(logical_device, nullptr);
+                logical_device = VK_NULL_HANDLE;
+            }
+            // destroy a vulkan instance
+            if (instance){
+                vkDestroyInstance(instance, nullptr);
+                instance = VK_NULL_HANDLE;
+            }
+            // Release a Vulkan Loader Library
+            if (vulkan_library){
+                dlclose(vulkan_library);
+                vulkan_library = nullptr;
+            }
             return 0;
         }
     }
