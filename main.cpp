@@ -29,8 +29,8 @@ void create_global_level_func(PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr){
 }
 
 struct QueueInfo {
- uint32_t FamilyIndex;
- std::vector<float> Priorities;
+    uint32_t FamilyIndex;
+    std::vector<float> Priorities;
 };
 
 int main() {
