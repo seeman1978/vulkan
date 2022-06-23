@@ -69,7 +69,7 @@ int main() {
     }
 
     // Get desired_extensions
-    std::vector<char const *> desired_extensions{VK_KHR_SURFACE_EXTENSION_NAME};
+    std::vector<char const *> desired_extensions{VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_XCB_SURFACE_EXTENSION_NAME};
     for (auto &extension: desired_extensions) {
         bool b_found{false};
         for (auto available : available_extensions) {
