@@ -218,6 +218,7 @@ int main() {
         std::cout << "Could not enumerate physical devices." << std::endl;
         return -1;
     }
+    // select a queue family that supports presentation to a given surface
     for (auto physical_device : physical_devices) {
         uint32_t queue_families_count;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
@@ -225,6 +226,7 @@ int main() {
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, queue_families.data());
         //Selecting the index of a queue family with the desired capabilities
         uint32_t queue_family_index, index{};
+        bool b_found{false};
         for (auto queue_family : queue_families)  {
             VkBool32 presentation_supported{VK_FALSE};
             result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, index, presentation_surface, &presentation_supported);
@@ -234,12 +236,95 @@ int main() {
             }
             if (presentation_supported){
                 queue_family_index = index;
+                b_found = true;
                 break;
             }
             ++index;
         }
+        if (!b_found){
+            std::cout << "Not found presentation_surface\n";
+            continue;
+        }
+
+        //Creating a logical device with WSI extensions enabled
+        // physical device extension properties
+        uint32_t DeviceExtensionProperties_extensions_count = 0;
+        result = vkEnumerateDeviceExtensionProperties( physical_device, nullptr,
+                                                       &DeviceExtensionProperties_extensions_count, nullptr );
+        if( (result != VK_SUCCESS) || (DeviceExtensionProperties_extensions_count == 0) ) {
+            std::cout << "Could not get the number of device extensions." << std::endl;
+            return -1;
+        }
+        std::vector<VkExtensionProperties> available_extensions_DeviceExtensionProperties(DeviceExtensionProperties_extensions_count);
+        result = vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &DeviceExtensionProperties_extensions_count, available_extensions_DeviceExtensionProperties.data());
+        if( (result != VK_SUCCESS) || (extensions_count == 0) ) {
+            std::cout << "Could not enumerate device extensions." << std::endl;
+            return -1;
+        }
+        // physical device desired extensions
+        std::vector<char const *> desired_extensions_DeviceExtensionProperties{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        for (auto &extension: desired_extensions_DeviceExtensionProperties) {
+            bool b_found{false};
+            for (auto available : available_extensions_DeviceExtensionProperties) {
+                if (strcmp(available.extensionName, extension) == 0){
+                    b_found = true;
+                    break;
+                }
+            }
+            if (!b_found){
+                std::cout << "Extension named '" << extension << "' is not supported."
+                          << std::endl;
+                return -1;
+            }
+        }
+        // Creating a logical device with WSI extensions enabled
+        std::vector<QueueInfo> queue_infos{{queue_family_index, {1.0f}}};
+        // Creating a device queue create info
+        std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+        for (auto queue_info : queue_infos) {
+            VkDeviceQueueCreateInfo device_queue;
+            device_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            device_queue.pNext = nullptr;
+            device_queue.flags = 0;
+            device_queue.queueFamilyIndex = queue_info.FamilyIndex;
+            device_queue.queueCount = queue_info.Priorities.size();
+            device_queue.pQueuePriorities = queue_info.Priorities.data();
+            queue_create_infos.emplace_back(device_queue);
+        }
+
+        //Getting features and properties of a physical device
+        VkPhysicalDeviceFeatures device_features;
+        VkPhysicalDeviceProperties device_properties;
+        vkGetPhysicalDeviceFeatures(physical_device, &device_features);
+        vkGetPhysicalDeviceProperties(physical_device, &device_properties);
+
+        if (device_features.geometryShader){
+            device_features = {};   // keep only geometryShader of device_features
+            device_features.geometryShader = VK_TRUE;
+        }else{
+            continue;
+        }
+
+        // Creating a logical device
+        VkDeviceCreateInfo device_create_info;
+        device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        device_create_info.pNext = nullptr;
+        device_create_info.flags = 0;
+        device_create_info.queueCreateInfoCount = queue_create_infos.size();
+        device_create_info.pQueueCreateInfos = queue_create_infos.data();
+        device_create_info.enabledLayerCount = 0;
+        device_create_info.ppEnabledLayerNames = nullptr;
+        device_create_info.enabledExtensionCount = desired_extensions_DeviceExtensionProperties.size();
+        device_create_info.ppEnabledExtensionNames = desired_extensions_DeviceExtensionProperties.empty() ? nullptr : desired_extensions_DeviceExtensionProperties.data();
+        device_create_info.pEnabledFeatures = &device_features;
+        VkDevice logical_device;
+        result = vkCreateDevice(physical_device, &device_create_info, nullptr, &logical_device);
+        if( (result != VK_SUCCESS) || (logical_device == VK_NULL_HANDLE) ) {
+            std::cout << "Could not create logical device." << std::endl;
+            return -1;
+        }
     }
-    // select a queue family that supports presentation to a given surface
+
 
     return 0;
 }
