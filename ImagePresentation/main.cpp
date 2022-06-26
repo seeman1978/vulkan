@@ -323,8 +323,53 @@ int main() {
             std::cout << "Could not create logical device." << std::endl;
             return -1;
         }
-    }
+        //Selecting a desired presentation mode
+        PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
+        vkGetPhysicalDeviceSurfacePresentModesKHR =
+                reinterpret_cast<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"));
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR == nullptr){
+            std::cout << "Could not load device-level Vulkan function named: vkGetPhysicalDeviceSurfacePresentModesKHR" << std::endl;
+            return -1;
+        }
 
+        uint32_t present_modes_count;
+        result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, presentation_surface, &present_modes_count, nullptr);
+        if (result != VK_SUCCESS || present_modes_count==0){
+            std::cout << "Could not get the number of supported present modes." <<
+                      std::endl;
+            return -1;
+        }
+        std::vector<VkPresentModeKHR> present_modes(present_modes_count);
+        result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, presentation_surface, &present_modes_count, present_modes.data());
+        if( (VK_SUCCESS != result) ||  (0 == present_modes_count) ) {
+            std::cout << "Could not enumerate present modes." << std::endl;
+            return -1;
+        }
+        VkPresentModeKHR desired_present_mode{VK_PRESENT_MODE_MAILBOX_KHR};
+        VkPresentModeKHR present_mode;
+        b_found = false;
+        for (auto current_present_mode : present_modes) {
+            if (current_present_mode == desired_present_mode){
+                present_mode = desired_present_mode;
+                b_found = true;
+                break;
+            }
+        }
+        if (!b_found){
+            std::cout << "Desired present mode is not supported. Selecting default FIFO mode." << std::endl;
+        }
+        for (auto current_present_mode : present_modes) {
+            if (current_present_mode == VK_PRESENT_MODE_FIFO_KHR){
+                present_mode = VK_PRESENT_MODE_FIFO_KHR;
+                b_found = true;
+                break;
+            }
+        }
+        if (!b_found){
+            std::cout << "Desired present mode VK_PRESENT_MODE_FIFO_KHR is not supported though it's mandatory for all drivers!" << std::endl;
+            return -1;
+        }
+    }
 
     return 0;
 }
