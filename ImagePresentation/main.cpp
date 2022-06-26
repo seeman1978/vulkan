@@ -204,7 +204,13 @@ int main() {
     PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
     vkGetPhysicalDeviceQueueFamilyProperties =
             reinterpret_cast<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceQueueFamilyProperties"));
-
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
+    vkGetPhysicalDeviceSurfacePresentModesKHR =
+            reinterpret_cast<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"));
+    if (vkGetPhysicalDeviceSurfacePresentModesKHR == nullptr){
+        std::cout << "Could not load device-level Vulkan function named: vkGetPhysicalDeviceSurfacePresentModesKHR" << std::endl;
+        return -1;
+    }
     //Get physical device
     uint32_t devices_count{0};
     result = vkEnumeratePhysicalDevices(instance, &devices_count, nullptr);
@@ -324,14 +330,6 @@ int main() {
             return -1;
         }
         //Selecting a desired presentation mode
-        PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
-        vkGetPhysicalDeviceSurfacePresentModesKHR =
-                reinterpret_cast<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"));
-        if (vkGetPhysicalDeviceSurfacePresentModesKHR == nullptr){
-            std::cout << "Could not load device-level Vulkan function named: vkGetPhysicalDeviceSurfacePresentModesKHR" << std::endl;
-            return -1;
-        }
-
         uint32_t present_modes_count;
         result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, presentation_surface, &present_modes_count, nullptr);
         if (result != VK_SUCCESS || present_modes_count==0){
@@ -367,6 +365,14 @@ int main() {
         }
         if (!b_found){
             std::cout << "Desired present mode VK_PRESENT_MODE_FIFO_KHR is not supported though it's mandatory for all drivers!" << std::endl;
+            return -1;
+        }
+        //Getting the capabilities of a presentation surface
+        VkSurfaceCapabilitiesKHR surface_capabilities;
+        result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, presentation_surface, &surface_capabilities);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not get the capabilities of a presentation surface."
+                      << std::endl;
             return -1;
         }
     }
