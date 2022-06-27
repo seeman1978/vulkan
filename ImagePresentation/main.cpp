@@ -232,28 +232,50 @@ int main() {
     for (auto physical_device : physical_devices) {
         uint32_t queue_families_count;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
+        if( queue_families_count == 0 ) {
+            std::cout << "Could not get the number of queue families." << std::endl;
+            return -1;
+        }
         std::vector<VkQueueFamilyProperties> queue_families(queue_families_count);
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, queue_families.data());
-        //Selecting the index of a queue family with the desired capabilities
-        uint32_t queue_family_index, index{};
+        if( queue_families_count == 0 ) {
+            std::cout << "Could not acquire properties of queue families." << std::endl;
+            return -1;
+        }
+        //Selecting the index of a queue family with the desired capabilities VK_QUEUE_GRAPHICS_BIT
         bool b_found{false};
-        for (auto queue_family : queue_families)  {
-            VkBool32 presentation_supported{VK_FALSE};
-            result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, index, presentation_surface, &presentation_supported);
-            if(result != VK_SUCCESS) {
-                std::cout << "Could not vkGetPhysicalDeviceSurfaceSupportKHR." << std::endl;
-                continue;
-            }
-            if (presentation_supported){
-                queue_family_index = index;
+        uint32_t GraphicsQueueFamilyIndex;
+        for( uint32_t index = 0; index < static_cast<uint32_t>(queue_families.size()); ++index ) {
+            if( (queue_families[index].queueCount > 0) && ((queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT) ) {
+                GraphicsQueueFamilyIndex = index;
                 b_found = true;
                 break;
             }
-            ++index;
+        }
+        if (!b_found){
+            std::cout << "Not found VK_QUEUE_GRAPHICS_BIT\n";
+            continue;
+        }
+
+        //Selecting the index of a queue family with the desired capabilities PresentationSurface
+        uint32_t PresentQueueFamilyIndex;
+        b_found = false;
+        for( uint32_t index = 0; index < static_cast<uint32_t>(queue_families.size()); ++index ) {
+            VkBool32 presentation_supported = VK_FALSE;
+            result = vkGetPhysicalDeviceSurfaceSupportKHR( physical_device, index, presentation_surface, &presentation_supported );
+            if( (VK_SUCCESS == result) && (VK_TRUE == presentation_supported) ) {
+                PresentQueueFamilyIndex = index;
+                b_found = true;
+            }
         }
         if (!b_found){
             std::cout << "Not found presentation_surface\n";
             continue;
+        }
+
+        std::vector<QueueInfo> requested_queues = { { GraphicsQueueFamilyIndex, { 1.0f } } };
+        if (GraphicsQueueFamilyIndex != PresentQueueFamilyIndex){
+            requested_queues.push_back({ PresentQueueFamilyIndex, { 1.0f } });
         }
 
         //Creating a logical device with WSI extensions enabled
@@ -287,11 +309,10 @@ int main() {
                 return -1;
             }
         }
-        // Creating a logical device with WSI extensions enabled
-        std::vector<QueueInfo> queue_infos{{queue_family_index, {1.0f}}};
+
         // Creating a device queue create info
         std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-        for (auto queue_info : queue_infos) {
+        for (auto queue_info : requested_queues) {
             VkDeviceQueueCreateInfo device_queue;
             device_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             device_queue.pNext = nullptr;
@@ -333,8 +354,86 @@ int main() {
             std::cout << "Could not create logical device." << std::endl;
             return -1;
         }
+        // Load device level functions
+        PFN_vkGetDeviceQueue vkGetDeviceQueue;
+        vkGetDeviceQueue =
+                reinterpret_cast<PFN_vkGetDeviceQueue>(vkGetDeviceProcAddr(logical_device, "vkGetDeviceQueue"));
+        if( vkGetDeviceQueue == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetDeviceQueue." << std::endl;
+            return -1;
+        }
+        PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+        vkDeviceWaitIdle =
+                reinterpret_cast<PFN_vkDeviceWaitIdle>(vkGetDeviceProcAddr(logical_device, "vkDeviceWaitIdle"));
+        if( vkDeviceWaitIdle == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDeviceWaitIdle." << std::endl;
+            return -1;
+        }
+        PFN_vkDestroyDevice vkDestroyDevice;
+        vkDestroyDevice =
+                reinterpret_cast<PFN_vkDestroyDevice>(vkGetDeviceProcAddr(logical_device, "vkDestroyDevice"));
+        if( vkDestroyDevice == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroyDevice." << std::endl;
+            return -1;
+        }
+        PFN_vkCreateBuffer vkCreateBuffer;
+        vkCreateBuffer =
+                reinterpret_cast<PFN_vkCreateBuffer>(vkGetDeviceProcAddr(logical_device, "vkCreateBuffer"));
+        if( vkCreateBuffer == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateBuffer." << std::endl;
+            return -1;
+        }
+        PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements;
+        vkGetBufferMemoryRequirements =
+                reinterpret_cast<PFN_vkGetBufferMemoryRequirements>(vkGetDeviceProcAddr(logical_device, "vkGetBufferMemoryRequirements"));
+        if( vkGetBufferMemoryRequirements == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetBufferMemoryRequirements." << std::endl;
+            return -1;
+        }
+
+        // Load device level function from extension
+        PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
+        vkCreateSwapchainKHR =
+                reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(logical_device, "vkCreateSwapchainKHR"));
+        if( vkCreateSwapchainKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateSwapchainKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
+        vkGetSwapchainImagesKHR =
+                reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(logical_device, "vkGetSwapchainImagesKHR"));
+        if( vkGetSwapchainImagesKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetSwapchainImagesKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
+        vkAcquireNextImageKHR =
+                reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(logical_device, "vkAcquireNextImageKHR"));
+        if( vkGetSwapchainImagesKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkAcquireNextImageKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkQueuePresentKHR vkQueuePresentKHR;
+        vkQueuePresentKHR =
+                reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(logical_device, "vkQueuePresentKHR"));
+        if( vkQueuePresentKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkQueuePresentKHR." << std::endl;
+            return -1;
+        }
+        PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
+        vkDestroySwapchainKHR =
+                reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(logical_device, "vkDestroySwapchainKHR"));
+        if( vkDestroySwapchainKHR == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroySwapchainKHR." << std::endl;
+            return -1;
+        }
+        // Get Device Queue
+        VkQueue GraphicsQueue;
+        vkGetDeviceQueue( logical_device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue );
+        VkQueue PresentQueue;
+        vkGetDeviceQueue( logical_device, PresentQueueFamilyIndex, 0, &PresentQueue );
         //Selecting a desired presentation mode
-        uint32_t present_modes_count;
+        uint32_t present_modes_count{};
         result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, presentation_surface, &present_modes_count, nullptr);
         if (result != VK_SUCCESS || present_modes_count==0){
             std::cout << "Could not get the number of supported present modes." <<
@@ -347,6 +446,7 @@ int main() {
             std::cout << "Could not enumerate present modes." << std::endl;
             return -1;
         }
+        // Select present mode
         VkPresentModeKHR desired_present_mode{VK_PRESENT_MODE_MAILBOX_KHR};
         VkPresentModeKHR present_mode;
         b_found = false;
@@ -375,8 +475,7 @@ int main() {
         VkSurfaceCapabilitiesKHR surface_capabilities;
         result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, presentation_surface, &surface_capabilities);
         if( VK_SUCCESS != result ) {
-            std::cout << "Could not get the capabilities of a presentation surface."
-                      << std::endl;
+            std::cout << "Could not get the capabilities of a presentation surface." << std::endl;
             return -1;
         }
     }
