@@ -266,6 +266,7 @@ int main() {
             if( (VK_SUCCESS == result) && (VK_TRUE == presentation_supported) ) {
                 PresentQueueFamilyIndex = index;
                 b_found = true;
+                break;
             }
         }
         if (!b_found){
@@ -312,7 +313,7 @@ int main() {
 
         // Creating a device queue create info
         std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-        for (auto queue_info : requested_queues) {
+        for (const auto& queue_info : requested_queues) {
             VkDeviceQueueCreateInfo device_queue;
             device_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             device_queue.pNext = nullptr;
@@ -320,7 +321,7 @@ int main() {
             device_queue.queueFamilyIndex = queue_info.FamilyIndex;
             device_queue.queueCount = queue_info.Priorities.size();
             device_queue.pQueuePriorities = queue_info.Priorities.data();
-            queue_create_infos.emplace_back(device_queue);
+            queue_create_infos.push_back(device_queue);
         }
 
         //Getting features and properties of a physical device
