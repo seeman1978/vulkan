@@ -5,8 +5,8 @@
 #include <cstring>
 
 struct WindowParameters{
-    xcb_connection_t*             connection;
-    xcb_window_t                  window;
+    xcb_connection_t*             Connection;
+    xcb_window_t                  Window;
 };
 
 void *load_vulkan_library(){
@@ -115,7 +115,7 @@ int main() {
     instance_create_info.enabledLayerCount = 0;
     instance_create_info.ppEnabledLayerNames = nullptr;
     instance_create_info.enabledExtensionCount = desired_extensions.size();
-    instance_create_info.ppEnabledExtensionNames = desired_extensions.empty() ? nullptr : &desired_extensions[0];
+    instance_create_info.ppEnabledExtensionNames = desired_extensions.empty() ? nullptr : desired_extensions.data();
 
     VkInstance instance;
     if (vkCreateInstance != nullptr){
@@ -138,15 +138,19 @@ int main() {
     // create a presentation surface
     int nScreenNum = 0;
     WindowParameters window_parameters;
-    window_parameters.connection = xcb_connect("vulkan", &nScreenNum);
-    window_parameters.window = xcb_generate_id(window_parameters.connection);
+    window_parameters.Connection = xcb_connect(nullptr, &nScreenNum);
+    if (xcb_connection_has_error(window_parameters.Connection)) {
+        printf("Cannot open display\n");
+        return -1;
+    }
+    window_parameters.Window = xcb_generate_id(window_parameters.Connection);
 
     VkXcbSurfaceCreateInfoKHR surface_create_info;
     surface_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     surface_create_info.pNext = nullptr;
     surface_create_info.flags = 0;
-    surface_create_info.connection = window_parameters.connection;
-    surface_create_info.window = window_parameters.window;
+    surface_create_info.connection = window_parameters.Connection;
+    surface_create_info.window = window_parameters.Window;
 
     VkSurfaceKHR presentation_surface{VK_NULL_HANDLE};
     VkResult result = vkCreateXcbSurfaceKHR(instance, &surface_create_info, nullptr, &presentation_surface);
