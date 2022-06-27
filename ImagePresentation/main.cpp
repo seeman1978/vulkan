@@ -238,7 +238,7 @@ int main() {
             result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, index, presentation_surface, &presentation_supported);
             if(result != VK_SUCCESS) {
                 std::cout << "Could not vkGetPhysicalDeviceSurfaceSupportKHR." << std::endl;
-                return -1;
+                continue;
             }
             if (presentation_supported){
                 queue_family_index = index;
