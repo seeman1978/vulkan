@@ -684,7 +684,7 @@ int main(int argc, char *argv[]) {
     swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
-    swapchain_ci.pQueueFamilyIndices = NULL;
+    swapchain_ci.pQueueFamilyIndices = nullptr;
     uint32_t queueFamilyIndices[2] = {(uint32_t)info.graphics_queue_family_index, (uint32_t)info.present_queue_family_index};
     if (info.graphics_queue_family_index != info.present_queue_family_index) {
         // If the graphics and present queues are from different queue families,
@@ -715,7 +715,13 @@ int main(int argc, char *argv[]) {
     PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
     vkGetDeviceProcAddr =
             reinterpret_cast<PFN_vkGetDeviceProcAddr>(vkGetInstanceProcAddr(info.inst, "vkGetDeviceProcAddr"));
-
+    PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
+    vkDestroySurfaceKHR =
+            reinterpret_cast<PFN_vkDestroySurfaceKHR>(vkGetInstanceProcAddr(info.inst, "vkDestroySurfaceKHR"));
+    if( vkDestroySurfaceKHR == nullptr ) {
+        std::cout << "Could not load device-level Vulkan function named: vkDestroySurfaceKHR." << std::endl;
+        return -1;
+    }
     // Load device level function from extension
     PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
     vkCreateSwapchainKHR =
@@ -766,13 +772,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Could not load device-level Vulkan function named: vkDestroyImageView." << std::endl;
         return -1;
     }
-    PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
-    vkDestroySurfaceKHR =
-            reinterpret_cast<PFN_vkDestroySurfaceKHR>(vkGetDeviceProcAddr(info.device, "vkDestroySurfaceKHR"));
-    if( vkDestroySurfaceKHR == nullptr ) {
-        std::cout << "Could not load device-level Vulkan function named: vkDestroySurfaceKHR." << std::endl;
-        return -1;
-    }
+
     PFN_vkDestroyDevice vkDestroyDevice;
     vkDestroyDevice =
             reinterpret_cast<PFN_vkDestroyDevice>(vkGetDeviceProcAddr(info.device, "vkDestroyDevice"));
