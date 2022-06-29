@@ -559,7 +559,13 @@ int main() {
             std::cout << "desired_usages is not equal image_usage";
             return -1;
         }
-
+        // Selecting a transformation of swapchain images
+        VkSurfaceTransformFlagBitsKHR desired_transform{VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR}, surface_transform;
+        if (surface_capabilities.supportedTransforms & desired_transform){
+            surface_transform = desired_transform;
+        } else{
+            surface_transform = surface_capabilities.currentTransform;
+        }
     }
 
     return 0;
