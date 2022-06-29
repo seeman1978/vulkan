@@ -537,6 +537,20 @@ int main() {
         if (surface_capabilities.maxImageCount > 0 && number_of_images > surface_capabilities.maxImageCount){
             number_of_images = surface_capabilities.maxImageCount;
         }
+        //Choosing a size of swapchain images
+        VkExtent2D size_of_images;
+        if (surface_capabilities.currentExtent.width == 0xFFFFFFFF){
+            size_of_images.width = 640 < surface_capabilities.minImageExtent.width ? surface_capabilities.minImageExtent.width : 640;
+            size_of_images.width = size_of_images.width > surface_capabilities.maxImageExtent.width ? surface_capabilities.maxImageExtent.width : size_of_images.width;
+            size_of_images.height = 480;
+            if (size_of_images.height < surface_capabilities.minImageExtent.height){
+                size_of_images.height = surface_capabilities.minImageExtent.height;
+            } else if (size_of_images.height > surface_capabilities.maxImageExtent.height){
+                size_of_images.height = surface_capabilities.maxImageExtent.height;
+            }
+        }else{
+            size_of_images = surface_capabilities.currentExtent;
+        }
     }
 
     return 0;
