@@ -551,6 +551,15 @@ int main() {
         }else{
             size_of_images = surface_capabilities.currentExtent;
         }
+
+        //Selecting desired usage scenarios of swapchain images
+        VkImageUsageFlags desired_usages{VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT}, image_usage{0};
+        image_usage = desired_usages & surface_capabilities.supportedUsageFlags;
+        if (desired_usages != image_usage){
+            std::cout << "desired_usages is not equal image_usage";
+            return -1;
+        }
+
     }
 
     return 0;
