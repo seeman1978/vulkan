@@ -45,10 +45,10 @@ void init_window(struct WindowParameters &info) {
 
     /* Magic code that will send notification when window is destroyed */
     xcb_intern_atom_cookie_t cookie = xcb_intern_atom(info.connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(info.connection, cookie, 0);
+    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(info.connection, cookie, nullptr);
 
     xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(info.connection, 0, 16, "WM_DELETE_WINDOW");
-    info.atom_wm_delete_window = xcb_intern_atom_reply(info.connection, cookie2, 0);
+    info.atom_wm_delete_window = xcb_intern_atom_reply(info.connection, cookie2, nullptr);
 
     xcb_change_property(info.connection, XCB_PROP_MODE_REPLACE, info.window, (*reply).atom, 4, 32, 1,
                         &(*info.atom_wm_delete_window).atom);
@@ -349,14 +349,14 @@ int main() {
         // physical device desired extensions
         std::vector<char const *> desired_extensions_DeviceExtensionProperties{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
         for (auto &extension: desired_extensions_DeviceExtensionProperties) {
-            bool b_found{false};
+            bool b_found_extensions{false};
             for (auto available : available_extensions_DeviceExtensionProperties) {
                 if (strcmp(available.extensionName, extension) == 0){
-                    b_found = true;
+                    b_found_extensions = true;
                     break;
                 }
             }
-            if (!b_found){
+            if (!b_found_extensions){
                 std::cout << "Extension named '" << extension << "' is not supported."
                           << std::endl;
                 return -1;
@@ -530,6 +530,12 @@ int main() {
         if( VK_SUCCESS != result ) {
             std::cout << "Could not get the capabilities of a presentation surface." << std::endl;
             return -1;
+        }
+        //Selecting a number of swapchain images
+        uint32_t number_of_images;
+        number_of_images = surface_capabilities.minImageCount+1;
+        if (surface_capabilities.maxImageCount > 0 && number_of_images > surface_capabilities.maxImageCount){
+            number_of_images = surface_capabilities.maxImageCount;
         }
     }
 
