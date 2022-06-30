@@ -611,6 +611,38 @@ int main() {
                 std::cout << "Desired format is not supported. Selecting available format-colorspace combination.\n";
             }
         }
+        //Creating a swapchain
+        VkSwapchainKHR old_swapchain{VK_NULL_HANDLE};
+        VkSwapchainCreateInfoKHR swapchain_create_info;
+        swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchain_create_info.pNext = nullptr;
+        swapchain_create_info.flags = 0;
+        swapchain_create_info.surface = presentation_surface;
+        swapchain_create_info.minImageCount = number_of_images;
+        swapchain_create_info.imageFormat = image_format;
+        swapchain_create_info.imageColorSpace = image_color_space;
+        swapchain_create_info.imageExtent = size_of_images;
+        swapchain_create_info.imageArrayLayers = 1;
+        swapchain_create_info.imageUsage = image_usage;
+        swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchain_create_info.queueFamilyIndexCount = 0;
+        swapchain_create_info.pQueueFamilyIndices = nullptr;
+        swapchain_create_info.preTransform = surface_transform;
+        swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        swapchain_create_info.presentMode = present_mode;
+        swapchain_create_info.clipped = VK_TRUE;
+        swapchain_create_info.oldSwapchain = old_swapchain;
+        VkSwapchainKHR swapchain;
+        result = vkCreateSwapchainKHR(logical_device, &swapchain_create_info, nullptr, &swapchain);
+        if (result != VK_SUCCESS || swapchain == VK_NULL_HANDLE){
+            std::cout << "couldn't create a swapchain\n";
+            return -1;
+        }
+        if (old_swapchain != VK_NULL_HANDLE){
+            vkDestroySwapchainKHR(logical_device, old_swapchain, nullptr);
+            old_swapchain = VK_NULL_HANDLE;
+        }
+
     }
 
     return 0;
