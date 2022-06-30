@@ -566,6 +566,51 @@ int main() {
         } else{
             surface_transform = surface_capabilities.currentTransform;
         }
+        // Selecting a format of swapchain images
+        VkSurfaceFormatKHR desired_surface_format{ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };  // image format and color-space pair
+        uint32_t formats_count;
+        result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, presentation_surface, &formats_count, nullptr);
+        if (result != VK_SUCCESS || formats_count == 0){
+            std::cout << "Could not get the number of supported present formats." << std::endl;
+            return -1;
+        }
+        std::vector<VkSurfaceFormatKHR> surface_formats(formats_count);
+        result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, presentation_surface, &formats_count, surface_formats.data());
+        if (result != VK_SUCCESS || formats_count == 0){
+            std::cout << "Could not get the number of supported present formats." << std::endl;
+            return -1;
+        }
+        VkFormat image_format;
+        VkColorSpaceKHR image_color_space;
+        if (surface_formats.size() == 1 && surface_formats[0].format == VK_FORMAT_UNDEFINED){
+            image_format = desired_surface_format.format;
+            image_color_space = desired_surface_format.colorSpace;
+        }else{
+            b_found = false;
+            for (auto& surface_format : surface_formats) {
+                if (desired_surface_format.format == surface_format.format && desired_surface_format.colorSpace == surface_format.colorSpace){
+                    image_format = desired_surface_format.format;
+                    image_color_space = desired_surface_format.colorSpace;
+                    b_found = true;
+                    break;
+                }
+            }
+            if (!b_found){
+                for (auto& surface_format : surface_formats) {
+                    if (desired_surface_format.format == surface_format.format){
+                        image_format = desired_surface_format.format;
+                        image_color_space = desired_surface_format.colorSpace;
+                        b_found = true;
+                        break;
+                    }
+                }
+            }
+            if (!b_found){// the format you wanted to use is not supported.
+                image_format = surface_formats[0].format;
+                image_color_space = surface_formats[0].colorSpace;
+                std::cout << "Desired format is not supported. Selecting available format-colorspace combination.\n";
+            }
+        }
     }
 
     return 0;
