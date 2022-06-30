@@ -462,7 +462,7 @@ int main() {
         PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
         vkAcquireNextImageKHR =
                 reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(logical_device, "vkAcquireNextImageKHR"));
-        if( vkGetSwapchainImagesKHR == nullptr ) {
+        if( vkAcquireNextImageKHR == nullptr ) {
             std::cout << "Could not load device-level Vulkan function named: vkAcquireNextImageKHR." << std::endl;
             return -1;
         }
@@ -641,6 +641,19 @@ int main() {
         if (old_swapchain != VK_NULL_HANDLE){
             vkDestroySwapchainKHR(logical_device, old_swapchain, nullptr);
             old_swapchain = VK_NULL_HANDLE;
+        }
+        // Getting handles of swapchain images
+        uint32_t images_count;
+        result = vkGetSwapchainImagesKHR(logical_device, swapchain, &images_count, nullptr);
+        if (result != VK_SUCCESS || images_count == 0){
+            std::cout << "could not get the number of swapchain images.\n";
+            return -1;
+        }
+        std::vector<VkImage> swapchain_images(images_count);
+        result = vkGetSwapchainImagesKHR(logical_device, swapchain, &images_count, swapchain_images.data());
+        if (result != VK_SUCCESS || images_count == 0){
+            std::cout << "could not enumerate swapchain images.\n";
+            return -1;
         }
 
     }
