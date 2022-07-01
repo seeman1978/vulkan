@@ -480,6 +480,21 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkDestroySwapchainKHR." << std::endl;
             return -1;
         }
+        PFN_vkCreateSemaphore vkCreateSemaphore;
+        vkCreateSemaphore =
+                reinterpret_cast<PFN_vkCreateSemaphore>(vkGetDeviceProcAddr(logical_device, "vkCreateSemaphore"));
+        if( vkCreateSemaphore == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateSemaphore." << std::endl;
+            return -1;
+        }
+        PFN_vkCreateFence vkCreateFence;
+        vkCreateFence =
+                reinterpret_cast<PFN_vkCreateFence>(vkGetDeviceProcAddr(logical_device, "vkCreateFence"));
+        if( vkCreateFence == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateFence." << std::endl;
+            return -1;
+        }
+
         // Get Device Queue
         VkQueue GraphicsQueue;
         vkGetDeviceQueue( logical_device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue );
@@ -653,6 +668,30 @@ int main() {
         result = vkGetSwapchainImagesKHR(logical_device, swapchain, &images_count, swapchain_images.data());
         if (result != VK_SUCCESS || images_count == 0){
             std::cout << "could not enumerate swapchain images.\n";
+            return -1;
+        }
+        // Acquiring a swapchain image
+        VkSemaphore semaphore;
+        VkSemaphoreCreateInfo semaphore_create_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
+        result = vkCreateSemaphore(logical_device, &semaphore_create_info, nullptr, &semaphore);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a semaphore." << std::endl;
+            return -1;
+        }
+        VkFence fence;
+        VkFenceCreateInfo fence_create_info;
+        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_create_info.pNext = nullptr;
+        fence_create_info.flags = 0;
+        result = vkCreateFence(logical_device, &fence_create_info, nullptr, &fence);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a fence." << std::endl;
+            return -1;
+        }
+        uint32_t image_index;
+        result = vkAcquireNextImageKHR(logical_device, swapchain, 2000000000, semaphore, fence, &image_index);  // 2000000000 : 2s
+        if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
+            std::cout << "could not vkAcquireNextImageKHR swapchain images.\n";
             return -1;
         }
 
