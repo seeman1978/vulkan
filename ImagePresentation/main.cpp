@@ -11,6 +11,11 @@ struct WindowParameters{
     xcb_intern_atom_reply_t *atom_wm_delete_window;
 };
 
+struct PresentInfo{
+    VkSwapchainKHR swapchain;
+    uint32_t image_index;
+};
+
 void *load_vulkan_library(){
     void *vulkan_library = dlopen("libvulkan.so.1", RTLD_NOW);
     if (vulkan_library == nullptr){
@@ -267,6 +272,14 @@ int main() {
         std::cout << "Could not load device-level Vulkan function named: vkGetPhysicalDeviceSurfacePresentModesKHR" << std::endl;
         return -1;
     }
+    PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
+    vkDestroySurfaceKHR =
+            reinterpret_cast<PFN_vkDestroySurfaceKHR>(vkGetInstanceProcAddr(instance, "vkDestroySurfaceKHR"));
+    if (vkDestroySurfaceKHR == nullptr){
+        std::cout << "Could not load device-level Vulkan function named: vkDestroySurfaceKHR" << std::endl;
+        return -1;
+    }
+
     //Get physical device
     uint32_t devices_count{0};
     result = vkEnumeratePhysicalDevices(instance, &devices_count, nullptr);
@@ -693,6 +706,42 @@ int main() {
         if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR){
             std::cout << "could not vkAcquireNextImageKHR swapchain images.\n";
             return -1;
+        }
+
+        // Presenting an image
+        VkSemaphore rendering_semaphore;
+        VkSemaphoreCreateInfo semaphore_create_info2{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
+        result = vkCreateSemaphore(logical_device, &semaphore_create_info2, nullptr, &rendering_semaphore);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a semaphore." << std::endl;
+            return -1;
+        }
+        std::vector<VkSemaphore> rendering_semaphores{rendering_semaphore};
+        std::vector<VkSwapchainKHR> swapchains{swapchain};
+        std::vector<uint32_t> image_indices{image_index};
+        VkPresentInfoKHR present_info;
+        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present_info.pNext = nullptr;
+        present_info.waitSemaphoreCount = rendering_semaphores.size();
+        present_info.pWaitSemaphores = rendering_semaphores.data();
+        present_info.swapchainCount = swapchains.size();
+        present_info.pSwapchains = swapchains.data();
+        present_info.pImageIndices = image_indices.data();
+        present_info.pResults = nullptr;
+        result = vkQueuePresentKHR(PresentQueue, &present_info);
+        if (result != VK_SUCCESS){
+            std::cout << "could not vkQueuePresentKHR present images.\n";
+            return -1;
+        }
+        // Destroying a swapchain
+        if (swapchain != VK_NULL_HANDLE){
+            vkDestroySwapchainKHR(logical_device, swapchain, nullptr);
+            swapchain = VK_NULL_HANDLE;
+        }
+        // Destroying a presentation surface
+        if (presentation_surface != VK_NULL_HANDLE){
+            vkDestroySurfaceKHR(instance, presentation_surface, nullptr);
+            presentation_surface = VK_NULL_HANDLE;
         }
 
     }
