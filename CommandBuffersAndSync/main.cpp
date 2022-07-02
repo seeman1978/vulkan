@@ -534,6 +534,20 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkEndCommandBuffer." << std::endl;
             return -1;
         }
+        PFN_vkResetCommandBuffer vkResetCommandBuffer;
+        vkResetCommandBuffer =
+                reinterpret_cast<PFN_vkResetCommandBuffer>(vkGetDeviceProcAddr(logical_device, "vkResetCommandBuffer"));
+        if( vkResetCommandBuffer == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkResetCommandBuffer." << std::endl;
+            return -1;
+        }
+        PFN_vkResetCommandPool vkResetCommandPool;
+        vkResetCommandPool =
+                reinterpret_cast<PFN_vkResetCommandPool>(vkGetDeviceProcAddr(logical_device, "vkResetCommandPool"));
+        if( vkResetCommandPool == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkResetCommandPool." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -786,6 +800,15 @@ int main() {
             return -1;
         }
 
+        // Waiting for fences
+        std::vector<VkFence> fences{fence};
+        VkBool32 wait_for_all{VK_TRUE};
+        uint64_t timeout{2000000000};
+        result = vkWaitForFences(logical_device, static_cast<uint32_t>(fences.size()), fences.data(), wait_for_all, timeout);
+        if (result != VK_SUCCESS){
+            std::cout << "Waiting on fence failed.\n";
+            return -1;
+        }
         // Presenting an image
         VkSemaphore rendering_semaphore;
         VkSemaphoreCreateInfo semaphore_create_info2{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
