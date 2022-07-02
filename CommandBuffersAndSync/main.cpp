@@ -513,6 +513,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCreateCommandPool." << std::endl;
             return -1;
         }
+        PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
+        vkAllocateCommandBuffers =
+                reinterpret_cast<PFN_vkAllocateCommandBuffers>(vkGetDeviceProcAddr(logical_device, "vkAllocateCommandBuffers"));
+        if( vkAllocateCommandBuffers == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkAllocateCommandBuffers." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -728,7 +735,18 @@ int main() {
             return -1;
         }
         /// Allocating command buffers
-
+        VkCommandBufferAllocateInfo command_buffer_allocate_info;
+        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        command_buffer_allocate_info.pNext = nullptr;
+        command_buffer_allocate_info.commandPool = command_pool;
+        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        command_buffer_allocate_info.commandBufferCount = 5;
+        std::vector<VkCommandBuffer> command_buffers{5};
+        result = vkAllocateCommandBuffers(logical_device, &command_buffer_allocate_info, command_buffers.data());
+        if (result != VK_SUCCESS){
+            std::cout << "could not allocate command buffers.\n";
+            return -1;
+        }
         // Presenting an image
         VkSemaphore rendering_semaphore;
         VkSemaphoreCreateInfo semaphore_create_info2{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
