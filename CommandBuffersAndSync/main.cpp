@@ -520,6 +520,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkAllocateCommandBuffers." << std::endl;
             return -1;
         }
+        PFN_vkBeginCommandBuffer vkBeginCommandBuffer;
+        vkBeginCommandBuffer =
+                reinterpret_cast<PFN_vkBeginCommandBuffer>(vkGetDeviceProcAddr(logical_device, "vkBeginCommandBuffer"));
+        if( vkBeginCommandBuffer == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkBeginCommandBuffer." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -734,7 +741,7 @@ int main() {
             std::cout << "Could not create command pool." << std::endl;
             return -1;
         }
-        /// Allocating command buffers
+        // Allocating command buffers
         VkCommandBufferAllocateInfo command_buffer_allocate_info;
         command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         command_buffer_allocate_info.pNext = nullptr;
@@ -747,6 +754,22 @@ int main() {
             std::cout << "could not allocate command buffers.\n";
             return -1;
         }
+        // Beginning a command buffer recording operation
+        VkCommandBuffer command_buffer = command_buffers[0];
+        VkCommandBufferUsageFlags usage;
+        usage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        VkCommandBufferInheritanceInfo *secondary_command_buffer{nullptr};
+        VkCommandBufferBeginInfo command_buffer_begin_info;
+        command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        command_buffer_begin_info.pNext = nullptr;
+        command_buffer_begin_info.flags = usage;
+        command_buffer_begin_info.pInheritanceInfo = secondary_command_buffer;
+        result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+        if (result != VK_SUCCESS){
+            std::cout << "Could not begin command buffer recording operation.\n";
+            return -1;
+        }
+
         // Presenting an image
         VkSemaphore rendering_semaphore;
         VkSemaphoreCreateInfo semaphore_create_info2{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
