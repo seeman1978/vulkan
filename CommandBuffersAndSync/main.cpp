@@ -21,6 +21,11 @@ struct QueueInfo {
     std::vector<float> Priorities;
 };
 
+struct WaitSemaphoreInfo{
+    VkSemaphore semaphore;
+    VkPipelineStageFlags waitingstage;
+};
+
 void *load_vulkan_library(){
     void *vulkan_library = dlopen("libvulkan.so.1", RTLD_NOW);
     if (vulkan_library == nullptr){
@@ -548,6 +553,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkResetCommandPool." << std::endl;
             return -1;
         }
+        PFN_vkWaitForFences vkWaitForFences;
+        vkWaitForFences =
+                reinterpret_cast<PFN_vkWaitForFences>(vkGetDeviceProcAddr(logical_device, "vkWaitForFences"));
+        if( vkWaitForFences == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkWaitForFences." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -800,6 +812,29 @@ int main() {
             return -1;
         }
 
+        //Submitting command buffers to a queue
+        VkSemaphore rendering_semaphore;
+        VkSemaphoreCreateInfo semaphore_create_info2{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
+        result = vkCreateSemaphore(logical_device, &semaphore_create_info2, nullptr, &rendering_semaphore);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a semaphore." << std::endl;
+            return -1;
+        }
+        std::vector<VkSemaphore> rendering_semaphores{rendering_semaphore};
+        WaitSemaphoreInfo wait_semaphore_info{semaphore, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT};
+        std::vector<VkSemaphore> wait_semaphore_handles{wait_semaphore_info.semaphore};
+        std::vector<VkPipelineStageFlags> wait_semaphore_stages{wait_semaphore_info.waitingstage};
+        VkSubmitInfo submit_info;
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = nullptr;
+        submit_info.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphore_handles.size());
+        submit_info.pWaitSemaphores = wait_semaphore_handles.data();
+        submit_info.pWaitDstStageMask = wait_semaphore_stages.data();
+        submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers.size());
+        submit_info.pCommandBuffers = command_buffers.data();
+        submit_info.signalSemaphoreCount = static_cast<uint32_t >(rendering_semaphores.size());
+        submit_info.pSignalSemaphores = rendering_semaphores.data();
+
         // Waiting for fences
         std::vector<VkFence> fences{fence};
         VkBool32 wait_for_all{VK_TRUE};
@@ -810,14 +845,6 @@ int main() {
             return -1;
         }
         // Presenting an image
-        VkSemaphore rendering_semaphore;
-        VkSemaphoreCreateInfo semaphore_create_info2{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0};
-        result = vkCreateSemaphore(logical_device, &semaphore_create_info2, nullptr, &rendering_semaphore);
-        if( VK_SUCCESS != result ) {
-            std::cout << "Could not create a semaphore." << std::endl;
-            return -1;
-        }
-        std::vector<VkSemaphore> rendering_semaphores{rendering_semaphore};
         std::vector<VkSwapchainKHR> swapchains{swapchain};
         std::vector<uint32_t> image_indices{image_index};
         VkPresentInfoKHR present_info;
