@@ -527,6 +527,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkBeginCommandBuffer." << std::endl;
             return -1;
         }
+        PFN_vkEndCommandBuffer vkEndCommandBuffer;
+        vkEndCommandBuffer =
+                reinterpret_cast<PFN_vkEndCommandBuffer>(vkGetDeviceProcAddr(logical_device, "vkEndCommandBuffer"));
+        if( vkEndCommandBuffer == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkEndCommandBuffer." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -767,6 +774,15 @@ int main() {
         result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
         if (result != VK_SUCCESS){
             std::cout << "Could not begin command buffer recording operation.\n";
+            return -1;
+        }
+
+        // do something
+
+        // Ending a command buffer recording operation
+        result = vkEndCommandBuffer(command_buffer);
+        if (result != VK_SUCCESS){
+            std::cout << "Error occurred during command buffer recording.\n";
             return -1;
         }
 
