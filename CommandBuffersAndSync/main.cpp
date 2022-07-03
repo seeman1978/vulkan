@@ -560,6 +560,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkWaitForFences." << std::endl;
             return -1;
         }
+        PFN_vkQueueSubmit vkQueueSubmit;
+        vkQueueSubmit =
+                reinterpret_cast<PFN_vkQueueSubmit>(vkGetDeviceProcAddr(logical_device, "vkQueueSubmit"));
+        if( vkQueueSubmit == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkQueueSubmit." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -834,6 +841,13 @@ int main() {
         submit_info.pCommandBuffers = command_buffers.data();
         submit_info.signalSemaphoreCount = static_cast<uint32_t >(rendering_semaphores.size());
         submit_info.pSignalSemaphores = rendering_semaphores.data();
+
+        result = vkQueueSubmit(PresentQueue, 1, &submit_info, VK_NULL_HANDLE);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Error occurred during command buffer submission." <<
+                      std::endl;
+            return -1;
+        }
 
         // Waiting for fences
         std::vector<VkFence> fences{fence};
