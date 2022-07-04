@@ -567,6 +567,20 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkQueueSubmit." << std::endl;
             return -1;
         }
+        PFN_vkQueueWaitIdle vkQueueWaitIdle;
+        vkQueueWaitIdle =
+                reinterpret_cast<PFN_vkQueueWaitIdle>(vkGetDeviceProcAddr(logical_device, "vkQueueWaitIdle"));
+        if( vkQueueWaitIdle == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkQueueWaitIdle." << std::endl;
+            return -1;
+        }
+        PFN_vkDestroyFence vkDestroyFence;
+        vkDestroyFence =
+                reinterpret_cast<PFN_vkDestroyFence>(vkGetDeviceProcAddr(logical_device, "vkDestroyFence"));
+        if( vkDestroyFence == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroyFence." << std::endl;
+            return -1;
+        }
 
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -875,6 +889,24 @@ int main() {
             std::cout << "could not vkQueuePresentKHR present images.\n";
             return -1;
         }
+        // Waiting until all commands submitted to a queue are finished
+        result = vkQueueWaitIdle(GraphicsQueue);
+        if (result != VK_SUCCESS){
+            std::cout << "Waiting for all operations submitted to queue failed.\n";
+            return -1;
+        }
+        // Waiting for all submitted commands to be finished
+        result = vkDeviceWaitIdle(logical_device);
+        if (result != VK_SUCCESS){
+            std::cout << "Waiting on a device failed.\n";
+            return -1;
+        }
+        // Destroy fence
+        if (fence != VK_NULL_HANDLE){
+            vkDestroyFence(logical_device, fence, nullptr);
+            fence = VK_NULL_HANDLE;
+        }
+
         // Destroying a swapchain
         if (swapchain != VK_NULL_HANDLE){
             vkDestroySwapchainKHR(logical_device, swapchain, nullptr);
