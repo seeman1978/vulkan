@@ -581,7 +581,27 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkDestroyFence." << std::endl;
             return -1;
         }
-
+        PFN_vkDestroySemaphore vkDestroySemaphore;
+        vkDestroySemaphore =
+                reinterpret_cast<PFN_vkDestroySemaphore>(vkGetDeviceProcAddr(logical_device, "vkDestroySemaphore"));
+        if( vkDestroySemaphore == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroySemaphore." << std::endl;
+            return -1;
+        }
+        PFN_vkFreeCommandBuffers vkFreeCommandBuffers;
+        vkFreeCommandBuffers =
+                reinterpret_cast<PFN_vkFreeCommandBuffers>(vkGetDeviceProcAddr(logical_device, "vkFreeCommandBuffers"));
+        if( vkFreeCommandBuffers == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkFreeCommandBuffers." << std::endl;
+            return -1;
+        }
+        PFN_vkDestroyCommandPool vkDestroyCommandPool;
+        vkDestroyCommandPool =
+                reinterpret_cast<PFN_vkDestroyCommandPool>(vkGetDeviceProcAddr(logical_device, "vkDestroyCommandPool"));
+        if( vkDestroyCommandPool == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkDestroyCommandPool." << std::endl;
+            return -1;
+        }
         // Get Device Queue
         VkQueue GraphicsQueue;
         vkGetDeviceQueue( logical_device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue );
@@ -907,6 +927,21 @@ int main() {
             fence = VK_NULL_HANDLE;
         }
 
+        // Destroy semaphore
+        if (semaphore != VK_NULL_HANDLE){
+            vkDestroySemaphore(logical_device, semaphore, nullptr);
+            semaphore = VK_NULL_HANDLE;
+        }
+        // Freeing command buffers
+        if (!command_buffers.empty()){
+            vkFreeCommandBuffers(logical_device, command_pool, command_buffers.size(), command_buffers.data());
+            command_buffers.clear();
+        }
+        // Destroying a command pool
+        if (command_pool != VK_NULL_HANDLE){
+            vkDestroyCommandPool(logical_device, command_pool, nullptr);
+            command_pool = VK_NULL_HANDLE;
+        }
         // Destroying a swapchain
         if (swapchain != VK_NULL_HANDLE){
             vkDestroySwapchainKHR(logical_device, swapchain, nullptr);
