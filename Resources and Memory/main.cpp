@@ -249,6 +249,9 @@ int main() {
         std::cout << "Could not load device-level Vulkan function named: vkDestroySurfaceKHR" << std::endl;
         return -1;
     }
+    PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties;
+    vkGetPhysicalDeviceMemoryProperties =
+            reinterpret_cast<PFN_vkGetPhysicalDeviceMemoryProperties>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceMemoryProperties"));
 
     // create a presentation surface
     int nScreenNum = 0;
@@ -602,6 +605,20 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkDestroyCommandPool." << std::endl;
             return -1;
         }
+        PFN_vkAllocateMemory vkAllocateMemory;
+        vkAllocateMemory =
+                reinterpret_cast<PFN_vkAllocateMemory>(vkGetDeviceProcAddr(logical_device, "vkAllocateMemory"));
+        if( vkAllocateMemory == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkAllocateMemory." << std::endl;
+            return -1;
+        }
+        PFN_vkBindBufferMemory vkBindBufferMemory;
+        vkBindBufferMemory =
+                reinterpret_cast<PFN_vkBindBufferMemory>(vkGetDeviceProcAddr(logical_device, "vkBindBufferMemory"));
+        if( vkBindBufferMemory == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkBindBufferMemory." << std::endl;
+            return -1;
+        }
 
         // Creating a buffer
         VkDeviceSize size{1};
@@ -623,6 +640,31 @@ int main() {
             return -1;
         }
 
+        // Allocating and binding a memory object for a buffer
+        VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
+        vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
+        VkMemoryRequirements memory_requirements;
+        vkGetBufferMemoryRequirements(logical_device, buffer, &memory_requirements);
+        VkDeviceMemory memory_object{VK_NULL_HANDLE};
+        VkMemoryPropertyFlagBits memory_properties{VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
+        for (uint32_t type = 0; type < physical_device_memory_properties.memoryTypeCount; ++type) {
+            if ((memory_requirements.memoryTypeBits&(1<<type)) && (physical_device_memory_properties.memoryTypes[type].propertyFlags & memory_properties) == memory_properties){
+                VkMemoryAllocateInfo buffer_memory_allocate_info{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, memory_requirements.size, type};
+                result = vkAllocateMemory(logical_device, &buffer_memory_allocate_info, nullptr, &memory_object);
+                if (VK_SUCCESS == result){
+                    break;
+                }
+            }
+        }
+        if (memory_object == VK_NULL_HANDLE){
+            std::cout << "Could not allocate memory for a buffer.\n";
+            return -1;
+        }
+        result = vkBindBufferMemory(logical_device, buffer, memory_object, 0);
+        if (result != VK_SUCCESS){
+            std::cout << "Could not bind memory object to a buffer.\n";
+            return -1;
+        }
         // Get Device Queue
         VkQueue GraphicsQueue;
         vkGetDeviceQueue( logical_device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue );
