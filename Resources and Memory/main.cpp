@@ -4,7 +4,6 @@
 #include <dlfcn.h>
 #include <cstring>
 
-
 struct WindowParameters{
     xcb_connection_t* connection;
     xcb_screen_t *screen;
@@ -25,6 +24,14 @@ struct QueueInfo {
 struct WaitSemaphoreInfo{
     VkSemaphore semaphore;
     VkPipelineStageFlags waitingstage;
+};
+
+struct BufferTransition {
+    VkBuffer        Buffer;
+    VkAccessFlags   CurrentAccess;
+    VkAccessFlags   NewAccess;
+    uint32_t        CurrentQueueFamily;
+    uint32_t        NewQueueFamily;
 };
 
 void *load_vulkan_library(){
@@ -619,6 +626,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkBindBufferMemory." << std::endl;
             return -1;
         }
+        PFN_vkCmdPipelineBarrier vkCmdPipelineBarrier;
+        vkCmdPipelineBarrier =
+                reinterpret_cast<PFN_vkCmdPipelineBarrier>(vkGetDeviceProcAddr(logical_device, "vkCmdPipelineBarrier"));
+        if( vkCmdPipelineBarrier == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCmdPipelineBarrier." << std::endl;
+            return -1;
+        }
 
         // Creating a buffer
         VkDeviceSize size{1};
@@ -664,6 +678,22 @@ int main() {
         if (result != VK_SUCCESS){
             std::cout << "Could not bind memory object to a buffer.\n";
             return -1;
+        }
+        // Setting a buffer memory barrier
+        std::vector<BufferTransition> buffer_transitions{{buffer, }};
+        std::vector<VkBufferMemoryBarrier> buffer_memory_barriers;
+        for (const auto& buffer_transition : buffer_transitions) {
+            VkBufferMemoryBarrier buffer_memory_barrier;
+            buffer_memory_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_memory_barrier.pNext = nullptr;
+            buffer_memory_barrier.srcAccessMask = buffer_transition.CurrentAccess;
+            buffer_memory_barrier.dstAccessMask = buffer_transition.NewAccess;
+            buffer_memory_barrier.srcQueueFamilyIndex = buffer_transition.CurrentQueueFamily;
+            buffer_memory_barrier.dstQueueFamilyIndex = buffer_transition.NewQueueFamily;
+            buffer_memory_barrier.buffer = buffer_transition.Buffer;
+            buffer_memory_barrier.offset = 0;
+            buffer_memory_barrier.size = VK_WHOLE_SIZE;
+            buffer_memory_barriers.push_back(buffer_memory_barrier);
         }
         // Get Device Queue
         VkQueue GraphicsQueue;
@@ -893,6 +923,11 @@ int main() {
         }
         // Beginning a command buffer recording operation
         VkCommandBuffer command_buffer = command_buffers[0];
+
+        VkPipelineStageFlags generating_stages, consuming_stages;
+        vkCmdPipelineBarrier(command_buffer, generating_stages, consuming_stages, 0, 0, nullptr, buffer_memory_barriers.size(), buffer_memory_barriers.data(), 0 ,
+                             nullptr);
+
         VkCommandBufferInheritanceInfo *secondary_command_buffer{nullptr};
         VkCommandBufferBeginInfo command_buffer_begin_info;
         command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
