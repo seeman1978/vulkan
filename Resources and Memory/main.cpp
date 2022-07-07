@@ -924,7 +924,7 @@ int main() {
         // Beginning a command buffer recording operation
         VkCommandBuffer command_buffer = command_buffers[0];
 
-        VkPipelineStageFlags generating_stages, consuming_stages;
+        VkPipelineStageFlags generating_stages{VK_PIPELINE_STAGE_ALL_COMMANDS_BIT}, consuming_stages{VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
         vkCmdPipelineBarrier(command_buffer, generating_stages, consuming_stages, 0, 0, nullptr, buffer_memory_barriers.size(), buffer_memory_barriers.data(), 0 ,
                              nullptr);
 
