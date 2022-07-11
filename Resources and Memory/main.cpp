@@ -640,15 +640,23 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCreateBufferView." << std::endl;
             return -1;
         }
+        PFN_vkCreateImage vkCreateImage;
+        vkCreateImage =
+                reinterpret_cast<PFN_vkCreateImage>(vkGetDeviceProcAddr(logical_device, "vkCreateImage"));
+        if( vkCreateImage == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateImage." << std::endl;
+            return -1;
+        }
+
 
         // Creating a buffer
-        VkDeviceSize size{1};
+        VkDeviceSize device_size{1};
         VkBufferUsageFlags usage{VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
         VkBufferCreateInfo buffer_create_info;
         buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_create_info.pNext = nullptr;
         buffer_create_info.flags = 0;
-        buffer_create_info.size = size;
+        buffer_create_info.size = device_size;
         buffer_create_info.usage = usage;
         buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         buffer_create_info.queueFamilyIndexCount = 0;
@@ -945,6 +953,35 @@ int main() {
         result = vkCreateBufferView(logical_device, &buffer_view_create_info, nullptr, &buffer_view);
         if (result != VK_SUCCESS){
             std::cout << "Could not create buffer view.\n";
+            return -1;
+        }
+
+        // Creating an image
+        VkImageType type;
+        VkExtent3D extent_3d_size;
+        uint32_t num_mipmaps, num_layers;
+        VkSampleCountFlagBits samples;
+        VkImageUsageFlags usage_scenarios;
+        VkImageCreateInfo image_create_info;
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = nullptr;
+        image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        image_create_info.imageType = type;
+        image_create_info.format = image_format;
+        image_create_info.extent = extent_3d_size;
+        image_create_info.mipLevels = num_mipmaps;
+        image_create_info.arrayLayers = num_layers;
+        image_create_info.samples = samples;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_create_info.usage = usage_scenarios;
+        image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        image_create_info.queueFamilyIndexCount = 0;
+        image_create_info.pQueueFamilyIndices = nullptr;
+        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        VkImage image;
+        result = vkCreateImage(logical_device, &image_create_info, nullptr, &image);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create an image." << std::endl;
             return -1;
         }
 
