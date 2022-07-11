@@ -633,6 +633,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCmdPipelineBarrier." << std::endl;
             return -1;
         }
+        PFN_vkCreateBufferView vkCreateBufferView;
+        vkCreateBufferView =
+                reinterpret_cast<PFN_vkCreateBufferView>(vkGetDeviceProcAddr(logical_device, "vkCreateBufferView"));
+        if( vkCreateBufferView == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCreateBufferView." << std::endl;
+            return -1;
+        }
 
         // Creating a buffer
         VkDeviceSize size{1};
@@ -695,6 +702,7 @@ int main() {
             buffer_memory_barrier.size = VK_WHOLE_SIZE;
             buffer_memory_barriers.push_back(buffer_memory_barrier);
         }
+
         // Get Device Queue
         VkQueue GraphicsQueue;
         vkGetDeviceQueue( logical_device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue );
@@ -921,6 +929,25 @@ int main() {
             std::cout << "could not allocate command buffers.\n";
             return -1;
         }
+
+        // Creating a buffer view
+        VkDeviceSize memory_offset{0}, memory_range{VK_WHOLE_SIZE};
+        VkBufferViewCreateInfo buffer_view_create_info;
+        buffer_view_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+        buffer_view_create_info.pNext = nullptr;
+        buffer_view_create_info.flags = 0;
+        buffer_view_create_info.buffer = buffer;
+        buffer_view_create_info.format = image_format;
+        buffer_view_create_info.offset = memory_offset;
+        buffer_view_create_info.range = memory_range;
+
+        VkBufferView buffer_view;
+        result = vkCreateBufferView(logical_device, &buffer_view_create_info, nullptr, &buffer_view);
+        if (result != VK_SUCCESS){
+            std::cout << "Could not create buffer view.\n";
+            return -1;
+        }
+
         // Beginning a command buffer recording operation
         VkCommandBuffer command_buffer = command_buffers[0];
 
