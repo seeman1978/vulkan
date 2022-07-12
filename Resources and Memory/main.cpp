@@ -1009,12 +1009,12 @@ int main() {
             }
         }
         if (memory_object == VK_NULL_HANDLE){
-            std::cout << "Could not allocate memory for a buffer.\n";
+            std::cout << "Could not allocate memory for an image.\n";
             return -1;
         }
         result = vkBindImageMemory(logical_device, image, memory_object, 0);
         if (result != VK_SUCCESS){
-            std::cout << "Could not bind image object to a buffer.\n";
+            std::cout << "Could not bind memory object to an image.\n";
             return -1;
         }
 
