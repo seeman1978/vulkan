@@ -647,8 +647,20 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCreateImage." << std::endl;
             return -1;
         }
-
-
+        PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements;
+        vkGetImageMemoryRequirements =
+                reinterpret_cast<PFN_vkGetImageMemoryRequirements>(vkGetDeviceProcAddr(logical_device, "vkGetImageMemoryRequirements"));
+        if( vkGetImageMemoryRequirements == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetImageMemoryRequirements." << std::endl;
+            return -1;
+        }
+        PFN_vkBindImageMemory vkBindImageMemory;
+        vkBindImageMemory =
+                reinterpret_cast<PFN_vkBindImageMemory>(vkGetDeviceProcAddr(logical_device, "vkBindImageMemory"));
+        if( vkBindImageMemory == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkBindImageMemory." << std::endl;
+            return -1;
+        }
         // Creating a buffer
         VkDeviceSize device_size{1};
         VkBufferUsageFlags usage{VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
@@ -982,6 +994,27 @@ int main() {
         result = vkCreateImage(logical_device, &image_create_info, nullptr, &image);
         if( VK_SUCCESS != result ) {
             std::cout << "Could not create an image." << std::endl;
+            return -1;
+        }
+
+        // Allocating and binding a memory object to an image
+        vkGetImageMemoryRequirements(logical_device, image, &memory_requirements);
+        for (uint32_t type = 0; type < physical_device_memory_properties.memoryTypeCount; ++type) {
+            if ((memory_requirements.memoryTypeBits&(1<<type)) && (physical_device_memory_properties.memoryTypes[type].propertyFlags & memory_properties) == memory_properties){
+                VkMemoryAllocateInfo image_memory_allocate_info{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, memory_requirements.size, type};
+                result = vkAllocateMemory(logical_device, &image_memory_allocate_info, nullptr, &memory_object);
+                if (VK_SUCCESS == result){
+                    break;
+                }
+            }
+        }
+        if (memory_object == VK_NULL_HANDLE){
+            std::cout << "Could not allocate memory for a buffer.\n";
+            return -1;
+        }
+        result = vkBindImageMemory(logical_device, image, memory_object, 0);
+        if (result != VK_SUCCESS){
+            std::cout << "Could not bind image object to a buffer.\n";
             return -1;
         }
 
