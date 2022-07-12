@@ -957,11 +957,11 @@ int main() {
         }
 
         // Creating an image
-        VkImageType type;
-        VkExtent3D extent_3d_size;
-        uint32_t num_mipmaps, num_layers;
-        VkSampleCountFlagBits samples;
-        VkImageUsageFlags usage_scenarios;
+        VkImageType type{VK_IMAGE_TYPE_2D};
+        VkExtent3D extent_3d_size{64, 64, 1};
+        uint32_t num_mipmaps{1}, num_layers{1};
+        VkSampleCountFlagBits samples{VK_SAMPLE_COUNT_1_BIT};
+        VkImageUsageFlags usage_scenarios{VK_IMAGE_USAGE_TRANSFER_DST_BIT};
         VkImageCreateInfo image_create_info;
         image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_create_info.pNext = nullptr;
@@ -970,7 +970,7 @@ int main() {
         image_create_info.format = image_format;
         image_create_info.extent = extent_3d_size;
         image_create_info.mipLevels = num_mipmaps;
-        image_create_info.arrayLayers = num_layers;
+        image_create_info.arrayLayers = num_layers*6;
         image_create_info.samples = samples;
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = usage_scenarios;
