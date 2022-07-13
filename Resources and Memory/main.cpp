@@ -34,6 +34,17 @@ struct BufferTransition {
     uint32_t        NewQueueFamily;
 };
 
+struct ImageTransition{
+    VkImage image;
+    VkAccessFlags current_access;   //type of memory operation
+    VkAccessFlags new_access;       //type of memory operation
+    VkImageLayout current_layout;
+    VkImageLayout new_layout;
+    uint32_t current_queue_family;
+    uint32_t new_queue_family;
+    VkImageAspectFlags aspect;
+};
+
 void *load_vulkan_library(){
     void *vulkan_library = dlopen("libvulkan.so.1", RTLD_NOW);
     if (vulkan_library == nullptr){
@@ -969,7 +980,7 @@ int main() {
         }
 
         // Creating an image
-        VkImageType type{VK_IMAGE_TYPE_2D};
+        VkImageType image_type{VK_IMAGE_TYPE_2D};
         VkExtent3D extent_3d_size{64, 64, 1};
         uint32_t num_mipmaps{1}, num_layers{1};
         VkSampleCountFlagBits samples{VK_SAMPLE_COUNT_1_BIT};
@@ -978,7 +989,7 @@ int main() {
         image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_create_info.pNext = nullptr;
         image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        image_create_info.imageType = type;
+        image_create_info.imageType = image_type;
         image_create_info.format = image_format;
         image_create_info.extent = extent_3d_size;
         image_create_info.mipLevels = num_mipmaps;
@@ -1018,6 +1029,29 @@ int main() {
             return -1;
         }
 
+        // Setting an image memory barrier
+        std::vector<ImageTransition> image_transitions{{image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, VK_IMAGE_ASPECT_COLOR_BIT}};
+
+        std::vector<VkImageMemoryBarrier> image_memory_barriers;
+        for (const auto& image_transition : image_transitions) {
+            VkImageMemoryBarrier image_memory_barrier;
+            image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            image_memory_barrier.pNext = nullptr;
+            image_memory_barrier.srcAccessMask = image_transition.current_access;
+            image_memory_barrier.dstAccessMask = image_transition.new_access;
+            image_memory_barrier.oldLayout = image_transition.current_layout;
+            image_memory_barrier.newLayout = image_transition.new_layout;
+            image_memory_barrier.srcQueueFamilyIndex = image_transition.current_queue_family;
+            image_memory_barrier.dstQueueFamilyIndex = image_transition.new_queue_family;
+            image_memory_barrier.image = image_transition.image;
+            image_memory_barrier.subresourceRange.aspectMask = image_transition.aspect;
+            image_memory_barrier.subresourceRange.baseMipLevel = 0;
+            image_memory_barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+            image_memory_barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            image_memory_barriers.push_back(image_memory_barrier);
+        }
         // Beginning a command buffer recording operation
         VkCommandBuffer command_buffer = command_buffers[0];
 
@@ -1036,6 +1070,8 @@ int main() {
             std::cout << "Could not begin command buffer recording operation.\n";
             return -1;
         }
+
+        vkCmdPipelineBarrier(command_buffer, generating_stages, consuming_stages, 0, 0, nullptr, 0, nullptr, image_memory_barriers.size(), image_memory_barriers.data());
 
         // do something
 
