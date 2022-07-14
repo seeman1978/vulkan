@@ -1057,6 +1057,8 @@ int main() {
             std::cout << "Could not create an image view.\n";
             return -1;
         }
+        // Creating a 2D image and view
+
         // Setting an image memory barrier
         std::vector<ImageTransition> image_transitions{{image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
                                                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, VK_IMAGE_ASPECT_COLOR_BIT}};
