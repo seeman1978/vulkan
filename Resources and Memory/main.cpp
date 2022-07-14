@@ -1057,7 +1057,26 @@ int main() {
             std::cout << "Could not create an image view.\n";
             return -1;
         }
-        // Creating a 2D image and view
+        // Creating a layered 2D image with a CUBEMAP view
+        VkImageViewCreateInfo image_cubemap_view_create_info;
+        image_cubemap_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_cubemap_view_create_info.pNext = nullptr;
+        image_cubemap_view_create_info.flags = 0;
+        image_cubemap_view_create_info.image = image;
+        image_cubemap_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        image_cubemap_view_create_info.format = image_format;
+        image_cubemap_view_create_info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
+        image_cubemap_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_cubemap_view_create_info.subresourceRange.baseMipLevel = 0;
+        image_cubemap_view_create_info.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        image_cubemap_view_create_info.subresourceRange.baseArrayLayer = 0;
+        image_cubemap_view_create_info.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        VkImageView image_cubemap_view;
+        result = vkCreateImageView(logical_device, &image_cubemap_view_create_info, nullptr, &image_cubemap_view);
+        if (result != VK_SUCCESS){
+            std::cout << "Could not create an image view.\n";
+            return -1;
+        }
 
         // Setting an image memory barrier
         std::vector<ImageTransition> image_transitions{{image, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
