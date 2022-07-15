@@ -679,7 +679,27 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCreateImageView." << std::endl;
             return -1;
         }
-
+        PFN_vkMapMemory vkMapMemory;
+        vkMapMemory =
+                reinterpret_cast<PFN_vkMapMemory>(vkGetDeviceProcAddr(logical_device, "vkMapMemory"));
+        if( vkMapMemory == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkMapMemory." << std::endl;
+            return -1;
+        }
+        PFN_vkFlushMappedMemoryRanges vkFlushMappedMemoryRanges;
+        vkFlushMappedMemoryRanges =
+                reinterpret_cast<PFN_vkFlushMappedMemoryRanges>(vkGetDeviceProcAddr(logical_device, "vkFlushMappedMemoryRanges"));
+        if( vkFlushMappedMemoryRanges == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkFlushMappedMemoryRanges." << std::endl;
+            return -1;
+        }
+        PFN_vkUnmapMemory vkUnmapMemory;
+        vkUnmapMemory =
+                reinterpret_cast<PFN_vkUnmapMemory>(vkGetDeviceProcAddr(logical_device, "vkUnmapMemory"));
+        if( vkUnmapMemory == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkUnmapMemory." << std::endl;
+            return -1;
+        }
         // Creating a buffer
         VkDeviceSize device_size{1};
         VkBufferUsageFlags usage{VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
@@ -706,7 +726,7 @@ int main() {
         VkMemoryRequirements memory_requirements;
         vkGetBufferMemoryRequirements(logical_device, buffer, &memory_requirements);
         VkDeviceMemory memory_object{VK_NULL_HANDLE};
-        VkMemoryPropertyFlagBits memory_properties{VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
+        VkMemoryPropertyFlagBits memory_properties{VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT};
         for (uint32_t type = 0; type < physical_device_memory_properties.memoryTypeCount; ++type) {
             if ((memory_requirements.memoryTypeBits&(1<<type)) && (physical_device_memory_properties.memoryTypes[type].propertyFlags & memory_properties) == memory_properties){
                 VkMemoryAllocateInfo buffer_memory_allocate_info{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, memory_requirements.size, type};
@@ -1101,6 +1121,30 @@ int main() {
             image_memory_barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
             image_memory_barriers.push_back(image_memory_barrier);
         }
+
+        // Mapping, updating and unmapping host-visible memory
+        VkDeviceSize offset, data_size;
+        void* data{nullptr}, *local_pointer{nullptr};
+        result = vkMapMemory(logical_device, memory_object, offset, data_size, 0, &local_pointer);
+        if (result != VK_SUCCESS){
+            std::cout << "Could not vkMapMemory\n";
+            return -1;
+        }
+        std::memcmp(logical_device, data, data_size);
+        std::vector<VkMappedMemoryRange> memory_ranges;
+        VkMappedMemoryRange mapped_memory_range;
+        mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        mapped_memory_range.pNext = nullptr;
+        mapped_memory_range.memory = memory_object;
+        mapped_memory_range.offset = offset;
+        mapped_memory_range.size = data_size;
+        memory_ranges.push_back(mapped_memory_range);
+        result = vkFlushMappedMemoryRanges(logical_device, memory_ranges.size(), memory_ranges.data());
+        if (result != VK_SUCCESS){
+            std::cout << "Could not vkFlushMappedMemoryRanges\n";
+            return -1;
+        }
+        vkUnmapMemory(logical_device, memory_object);
         // Beginning a command buffer recording operation
         VkCommandBuffer command_buffer = command_buffers[0];
 
