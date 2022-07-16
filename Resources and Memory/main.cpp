@@ -97,6 +97,32 @@ void init_window(struct WindowParameters &info) {
     }
 }
 
+void SetBufferMemoryBarrier( PFN_vkCmdPipelineBarrier vkCmdPipelineBarrier,
+                             VkCommandBuffer               command_buffer,
+                             VkPipelineStageFlags          generating_stages,
+                             VkPipelineStageFlags          consuming_stages,
+                             const std::vector<BufferTransition>& buffer_transitions ) {
+    std::vector<VkBufferMemoryBarrier> buffer_memory_barriers;
+
+    for(const auto & buffer_transition : buffer_transitions ) {
+        buffer_memory_barriers.push_back( {
+                                                  VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,    // VkStructureType    sType
+                                                  nullptr,                                    // const void       * pNext
+                                                  buffer_transition.CurrentAccess,            // VkAccessFlags      srcAccessMask
+                                                  buffer_transition.NewAccess,                // VkAccessFlags      dstAccessMask
+                                                  buffer_transition.CurrentQueueFamily,       // uint32_t           srcQueueFamilyIndex
+                                                  buffer_transition.NewQueueFamily,           // uint32_t           dstQueueFamilyIndex
+                                                  buffer_transition.Buffer,                   // VkBuffer           buffer
+                                                  0,                                          // VkDeviceSize       offset
+                                                  VK_WHOLE_SIZE                               // VkDeviceSize       size
+                                          } );
+    }
+
+    if( !buffer_memory_barriers.empty() ) {
+        vkCmdPipelineBarrier( command_buffer, generating_stages, consuming_stages, 0, 0, nullptr, static_cast<uint32_t>(buffer_memory_barriers.size()), buffer_memory_barriers.data(), 0, nullptr );
+    }
+}
+
 int main() {
     // Load vulkan library
     void *vulkan_library = load_vulkan_library();
@@ -700,6 +726,14 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkUnmapMemory." << std::endl;
             return -1;
         }
+        PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
+        vkCmdCopyBuffer =
+                reinterpret_cast<PFN_vkCmdCopyBuffer>(vkGetDeviceProcAddr(logical_device, "vkCmdCopyBuffer"));
+        if( vkCmdCopyBuffer == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCmdCopyBuffer." << std::endl;
+            return -1;
+        }
+
         // Creating a buffer
         VkDeviceSize device_size{1};
         VkBufferUsageFlags usage{VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
@@ -720,6 +754,20 @@ int main() {
             return -1;
         }
 
+        VkBuffer source_buffer, destination_buffer;
+        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        result = vkCreateBuffer(logical_device, &buffer_create_info, nullptr, &source_buffer);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a buffer." << std::endl;
+            return -1;
+        }
+
+        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        result = vkCreateBuffer(logical_device, &buffer_create_info, nullptr, &destination_buffer);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a buffer." << std::endl;
+            return -1;
+        }
         // Allocating and binding a memory object for a buffer
         VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
         vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
@@ -1168,6 +1216,10 @@ int main() {
 
         // do something
 
+        SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, generating_stages, VK_PIPELINE_STAGE_TRANSFER_BIT, {{destination_buffer, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
+        std::vector<VkBufferCopy> regions{{0, offset, data_size}};
+        vkCmdCopyBuffer(command_buffer, source_buffer, destination_buffer, regions.size(), regions.data());
+        SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, consuming_stages, {{destination_buffer, VK_ACCESS_TRANSFER_WRITE_BIT, 0, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
         // Ending a command buffer recording operation
         result = vkEndCommandBuffer(command_buffer);
         if (result != VK_SUCCESS){
