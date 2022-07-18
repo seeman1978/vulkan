@@ -733,6 +733,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCmdCopyBuffer." << std::endl;
             return -1;
         }
+        PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
+        vkCmdCopyBufferToImage =
+                reinterpret_cast<PFN_vkCmdCopyBufferToImage>(vkGetDeviceProcAddr(logical_device, "vkCmdCopyBufferToImage"));
+        if( vkCmdCopyBufferToImage == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkCmdCopyBufferToImage." << std::endl;
+            return -1;
+        }
 
         // Creating a buffer
         VkDeviceSize device_size{1};
@@ -1084,6 +1091,29 @@ int main() {
             return -1;
         }
 
+        VkImageCreateInfo dst_image_create_info;
+        dst_image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        dst_image_create_info.pNext = nullptr;
+        dst_image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        dst_image_create_info.imageType = image_type;
+        dst_image_create_info.format = image_format;
+        dst_image_create_info.extent = extent_3d_size;
+        dst_image_create_info.mipLevels = num_mipmaps;
+        dst_image_create_info.arrayLayers = num_layers*6;
+        dst_image_create_info.samples = samples;
+        dst_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        dst_image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        dst_image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        dst_image_create_info.queueFamilyIndexCount = 0;
+        dst_image_create_info.pQueueFamilyIndices = nullptr;
+        dst_image_create_info.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        VkImage destination_image;
+        result = vkCreateImage(logical_device, &dst_image_create_info, nullptr, &destination_image);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create an dest image." << std::endl;
+            return -1;
+        }
+
         // Allocating and binding a memory object to an image
         vkGetImageMemoryRequirements(logical_device, image, &memory_requirements);
         for (uint32_t type = 0; type < physical_device_memory_properties.memoryTypeCount; ++type) {
@@ -1220,6 +1250,22 @@ int main() {
         std::vector<VkBufferCopy> regions{{0, offset, data_size}};
         vkCmdCopyBuffer(command_buffer, source_buffer, destination_buffer, regions.size(), regions.data());
         SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, consuming_stages, {{destination_buffer, VK_ACCESS_TRANSFER_WRITE_BIT, 0, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
+
+        // Copying data from buffer to image
+        SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, generating_stages, VK_PIPELINE_STAGE_TRANSFER_BIT, {{destination_buffer, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
+        std::vector<VkBufferImageCopy> buffer_image_copy_regions;
+        VkBufferImageCopy buffer_image_copy;
+        buffer_image_copy.bufferOffset = 0;
+        buffer_image_copy.bufferRowLength = 0;
+        buffer_image_copy.bufferImageHeight = 0;
+        buffer_image_copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        buffer_image_copy.imageOffset = {0, 0, 1};
+        buffer_image_copy.imageExtent = { 64, 64, 1 };
+        buffer_image_copy_regions.push_back(buffer_image_copy);
+        vkCmdCopyBufferToImage(command_buffer, source_buffer, destination_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer_image_copy_regions.size(),
+                               buffer_image_copy_regions.data());
+        SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, consuming_stages, {{destination_buffer, VK_ACCESS_TRANSFER_WRITE_BIT, 0, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
+
         // Ending a command buffer recording operation
         result = vkEndCommandBuffer(command_buffer);
         if (result != VK_SUCCESS){
