@@ -1114,6 +1114,29 @@ int main() {
             return -1;
         }
 
+        VkImageCreateInfo source_image_create_info;
+        source_image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        source_image_create_info.pNext = nullptr;
+        source_image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        source_image_create_info.imageType = image_type;
+        source_image_create_info.format = image_format;
+        source_image_create_info.extent = extent_3d_size;
+        source_image_create_info.mipLevels = num_mipmaps;
+        source_image_create_info.arrayLayers = num_layers*6;
+        source_image_create_info.samples = samples;
+        source_image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        source_image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        source_image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        source_image_create_info.queueFamilyIndexCount = 0;
+        source_image_create_info.pQueueFamilyIndices = nullptr;
+        source_image_create_info.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        VkImage source_image;
+        result = vkCreateImage(logical_device, &source_image_create_info, nullptr, &source_image);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create an dest image." << std::endl;
+            return -1;
+        }
+
         // Allocating and binding a memory object to an image
         vkGetImageMemoryRequirements(logical_device, image, &memory_requirements);
         for (uint32_t type = 0; type < physical_device_memory_properties.memoryTypeCount; ++type) {
@@ -1265,6 +1288,21 @@ int main() {
         vkCmdCopyBufferToImage(command_buffer, source_buffer, destination_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer_image_copy_regions.size(),
                                buffer_image_copy_regions.data());
         SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, consuming_stages, {{destination_buffer, VK_ACCESS_TRANSFER_WRITE_BIT, 0, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
+
+        // Copying data from an image to a buffer
+        SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, generating_stages, VK_PIPELINE_STAGE_TRANSFER_BIT, {{destination_buffer, 0, VK_ACCESS_TRANSFER_READ_BIT, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
+        std::vector<VkBufferImageCopy> image_buffer_copy_regions;
+        VkBufferImageCopy image_buffer_copy;
+        image_buffer_copy.bufferOffset = 0;
+        image_buffer_copy.bufferRowLength = 0;
+        image_buffer_copy.bufferImageHeight = 0;
+        image_buffer_copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        image_buffer_copy.imageOffset = {0, 0, 1};
+        image_buffer_copy.imageExtent = { 64, 64, 1 };
+        image_buffer_copy_regions.push_back(image_buffer_copy);
+        vkCmdCopyImageToBuffer(command_buffer, source_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, destination_buffer, image_buffer_copy_regions.size(),
+                               image_buffer_copy_regions.data());
+        SetBufferMemoryBarrier(vkCmdPipelineBarrier, command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, consuming_stages, {{destination_buffer, VK_ACCESS_TRANSFER_READ_BIT, 0, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED}});
 
         // Ending a command buffer recording operation
         result = vkEndCommandBuffer(command_buffer);
