@@ -775,6 +775,14 @@ int main() {
             std::cout << "Could not create a buffer." << std::endl;
             return -1;
         }
+
+        VkBuffer staging_buffer;
+        buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        result = vkCreateBuffer(logical_device, &buffer_create_info, nullptr, &staging_buffer);
+        if( VK_SUCCESS != result ) {
+            std::cout << "Could not create a buffer." << std::endl;
+            return -1;
+        }
         // Allocating and binding a memory object for a buffer
         VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
         vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
@@ -795,11 +803,13 @@ int main() {
             std::cout << "Could not allocate memory for a buffer.\n";
             return -1;
         }
-        result = vkBindBufferMemory(logical_device, buffer, memory_object, 0);
+        result = vkBindBufferMemory(logical_device, staging_buffer, memory_object, 0);
         if (result != VK_SUCCESS){
             std::cout << "Could not bind memory object to a buffer.\n";
             return -1;
         }
+
+
         // Setting a buffer memory barrier
         std::vector<BufferTransition> buffer_transitions{{buffer, }};
         std::vector<VkBufferMemoryBarrier> buffer_memory_barriers;
