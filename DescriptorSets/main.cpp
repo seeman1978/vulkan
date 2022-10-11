@@ -754,7 +754,13 @@ int main() {
             std::cout << "Could not load device-level Vulkan function named: vkCreateSampler." << std::endl;
             return -1;
         }
-
+        PFN_vkGetPhysicalDeviceFormatProperties vkGetPhysicalDeviceFormatProperties;
+        vkGetPhysicalDeviceFormatProperties =
+                reinterpret_cast<PFN_vkGetPhysicalDeviceFormatProperties>(vkGetDeviceProcAddr(logical_device, "vkGetPhysicalDeviceFormatProperties"));
+        if( vkGetPhysicalDeviceFormatProperties == nullptr ) {
+            std::cout << "Could not load device-level Vulkan function named: vkGetPhysicalDeviceFormatProperties." << std::endl;
+            return -1;
+        }
 
         // Creating a buffer
         VkDeviceSize device_size{1};
@@ -1297,6 +1303,20 @@ int main() {
         result = vkCreateSampler(logical_device, &sampler_create_info, nullptr, &sampler);
         if (VK_SUCCESS != result){
             std::cout << "Could not create sampler." << std::endl;
+            return -1;
+        }
+
+        // Creating a sampled image
+        VkFormat format{VK_FORMAT_R8G8B8A8_UNORM};
+        VkFormatProperties format_properties;
+        vkGetPhysicalDeviceFormatProperties( physical_device, format,
+                                             &format_properties );
+        if (!(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)){
+            std::cout << "Provided format is not supported for a sampled image." << std::endl;
+            return -1;
+        }
+        if (!(format_properties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)){
+            std::cout << "Provided format is not supported for a linear image filtering." << std::endl;
             return -1;
         }
 
